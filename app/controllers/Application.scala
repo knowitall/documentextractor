@@ -11,6 +11,9 @@ import edu.washington.cs.knowitall.ollie.confidence.OllieIndependentConfFunction
 import models.Extraction
 import scala.util.control.Exception
 import scala.io.Source
+import play.api.data.validation.Constraints._
+import java.net.URL
+import java.net.MalformedURLException
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -18,12 +21,12 @@ object Application extends Controller {
   val parser = new MaltParser()
 
   def index = Action {
-    Ok(views.html.index(InputForms.textForm, InputForms.urlForm, "Your new application is ready."))
+    Ok(views.html.index(InputForms.textForm, InputForms.urlForm, 'text))
   }
 
   def submitText = Action { implicit request =>
     InputForms.textForm.bindFromRequest.fold(
-      errors => BadRequest("Bad!"),
+      errors => BadRequest(views.html.index(errors, InputForms.urlForm, 'text)),
       input => Ok(process(input)))
   }
 
@@ -51,7 +54,7 @@ object Application extends Controller {
 
   def submitUrl = Action { implicit request =>
     InputForms.urlForm.bindFromRequest.fold(
-      errors => BadRequest("Bad!"),
+      errors => BadRequest(views.html.index(InputForms.textForm, errors, 'url)),
       input => Ok(process(input)))
   }
 
@@ -76,7 +79,7 @@ object Application extends Controller {
       }
       Form(
         (Forms.mapping(
-          "url" -> Forms.text))(UrlInput.apply)(UrlInput.unapply))
+          "url" -> Forms.text.verifying("Malformed URL.", Exception.catching(classOf[MalformedURLException]) opt new URL(_) isDefined)))(UrlInput.apply)(UrlInput.unapply))
     }
 
     def textForm: Form[TextInput] = {
@@ -85,7 +88,7 @@ object Application extends Controller {
       }
       Form(
         (Forms.mapping(
-          "text" -> Forms.text))(TextInput.apply)(TextInput.unapply))
+          "text" -> Forms.text.verifying(nonEmpty)))(TextInput.apply)(TextInput.unapply))
     }
   }
 }
