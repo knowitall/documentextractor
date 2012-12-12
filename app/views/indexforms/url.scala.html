@@ -1,0 +1,9 @@
+@(urlForm: Form[UrlInput])
+
+@helper.form(action = routes.Application.submitUrl) {
+  @helper.inputText(
+    urlForm("url"),
+    '_label -> "URL:",
+    'placeholder -> "http://www.google.com/")
+  <button>Submit</button>
+}

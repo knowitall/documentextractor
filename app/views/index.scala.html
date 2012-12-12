@@ -1,0 +1,23 @@
+@(textForm: Form[TextInput], urlForm: Form[UrlInput], message: String)
+
+@main("Document Extractor") {
+    <h1>Document Extractor</h1>
+    <div class="tabbable tabs-left">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#tab1" data-toggle="tab">Text input</a></li>
+          <li><a href="#tab2" data-toggle="tab">File upload</a></li>
+          <li><a href="#tab3" data-toggle="tab">Web URL</a></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="tab1">
+            @indexforms.textinput(textForm)
+          </div>
+          <div class="tab-pane" id="tab2">
+            @indexforms.fileupload()
+          </div>
+          <div class="tab-pane" id="tab3">
+            @indexforms.url(urlForm)
+          </div>
+        </div>
+    </div>
+}

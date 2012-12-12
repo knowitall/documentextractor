@@ -1,0 +1,12 @@
+@(results: List[Extraction])
+
+@main("Extractions and Summaries") {
+<h1>Extractions</h1>
+<p>Go back and <a href="@routes.Application.index">try a different input</a>.</p>
+
+  <ol>
+  @for(result <- results) {
+    <li>(@result.arg1, @result.rel, @result.arg2)</li>
+  }
+  </ol>
+}
