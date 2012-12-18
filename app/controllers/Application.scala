@@ -64,9 +64,9 @@ object Application extends Controller {
       Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence) map { (sentence, _) }
     }
     val sentences = graphs map { case (text, graph) =>
-      val extrs = ollie.extract(graph).map { extr =>
-	    def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
-	    Extraction(olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
+      def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
+      val extrs = ollie.extract(graph).map{ extr => (extr, ollieConf(extr)) }.toSeq.sortBy(-_._2).map(_._1).map { extr =>
+        Extraction(olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
       }
 
       models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
