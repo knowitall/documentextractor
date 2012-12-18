@@ -1,0 +1,12 @@
+@(sentence: Sentence)
+
+@sentence.coloredChars.collect{
+  case ColoredChar(color, c) => {<span style="color: @color">@c</span>}
+  case NormalChar(c) => {@c} 
+}
+
+<ul>
+@for(extr <- sentence.extractions) {
+  <li>(@extr.arg1.string, @extr.rel.string, @extr.arg2.string)</li>
+}
+</ul>

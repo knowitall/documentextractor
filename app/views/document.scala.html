@@ -1,12 +1,11 @@
-@(results: List[Extraction])
+@(document: Document)
 
 @main("Extractions and Summaries") {
 <h1>Extractions</h1>
 <p>Go back and <a href="@routes.Application.index">try a different input</a>.</p>
-
   <ol>
-  @for(result <- results) {
-    <li>(@result.arg1, @result.rel, @result.arg2)</li>
+  @for(s <- document.sentences) {
+    <li>@sentence(s)</li>
   }
   </ol>
 }

@@ -1,9 +1,9 @@
 package controllers
 
 import edu.washington.cs.knowitall.ollie.Ollie
-import models.{FileInput, Input, TextInput, UrlInput}
+import models.{ FileInput, Input, TextInput, UrlInput }
 import play.api._
-import play.api.data.{Form, Forms}
+import play.api.data.{ Form, Forms }
 import play.api.mvc._
 import edu.washington.cs.knowitall.tool.parse.MaltParser
 import edu.washington.cs.knowitall.common.Resource.using
@@ -14,6 +14,7 @@ import scala.io.Source
 import play.api.data.validation.Constraints._
 import java.net.URL
 import java.net.MalformedURLException
+import edu.washington.cs.knowitall.openparse.extract.Extraction.{ Part => OlliePart }
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -39,18 +40,17 @@ object Application extends Controller {
   }
 
   def upload = Action(parse.multipartFormData) { request =>
-  request.body.file("picture").map { picture =>
-    import java.io.File
-    val filename = picture.filename
-    val contentType = picture.contentType
-    picture.ref.moveTo(new File("/tmp/picture"))
-    Ok("File uploaded")
-  }.getOrElse {
-    Redirect(routes.Application.index).flashing(
-      "error" -> "Missing file"
-    )
+    request.body.file("picture").map { picture =>
+      import java.io.File
+      val filename = picture.filename
+      val contentType = picture.contentType
+      picture.ref.moveTo(new File("/tmp/picture"))
+      Ok("File uploaded")
+    }.getOrElse {
+      Redirect(routes.Application.index).flashing(
+        "error" -> "Missing file")
+    }
   }
-}
 
   def submitUrl = Action { implicit request =>
     InputForms.urlForm.bindFromRequest.fold(
@@ -59,17 +59,20 @@ object Application extends Controller {
   }
 
   def process(input: Input) = {
-    val sentences = input.sentences
-    val graphs = sentences map (_.trim) filter (!_.isEmpty) flatMap { sentence =>
-      Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence)
+    val sentenceTexts = input.sentences
+    val graphs = sentenceTexts map (_.trim) filter (!_.isEmpty) flatMap { sentence =>
+      Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence) map { (sentence, _) }
     }
-    val ollieExtrs = graphs flatMap ollie.extract
+    val sentences = graphs map { case (text, graph) =>
+      val extrs = ollie.extract(graph).map { extr =>
+	    def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
+	    Extraction(olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
+      }
 
-    val extrs = ollieExtrs.map { extr =>
-      Extraction(extr.extr.arg1.text, extr.extr.rel.text, extr.extr.arg2.text, ollieConf(extr))
-    }.sortBy(-_.conf)
+      models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
+    }
 
-    views.html.results(extrs)
+    views.html.document(models.Document(sentences))
   }
 
   object InputForms {
