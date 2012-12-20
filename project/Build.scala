@@ -16,7 +16,9 @@ object ApplicationBuild extends Build {
       "net.databinder.dispatch" % "dispatch-core_2.9.2" % "0.9.4",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "net.sourceforge.nekohtml" % "nekohtml" % "1.9.17",
-      "xerces" % "xercesImpl" % "2.9.1"
+      "xerces" % "xercesImpl" % "2.9.1",
+      "joda-time" % "joda-time" % "2.1",
+      "org.apache.derby" % "derby" % "10.9.1.0"
     )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(

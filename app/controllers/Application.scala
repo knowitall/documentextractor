@@ -15,6 +15,7 @@ import play.api.data.validation.Constraints._
 import java.net.URL
 import java.net.MalformedURLException
 import edu.washington.cs.knowitall.openparse.extract.Extraction.{ Part => OlliePart }
+import models.LogEntry
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -60,6 +61,13 @@ object Application extends Controller {
 
   def process(input: Input) = {
     val sentenceTexts = input.sentences
+
+    LogEntry.fromRequest(sentenceTexts).save()
+
+    views.html.document(buildDocument(sentenceTexts))
+  }
+
+  def buildDocument(sentenceTexts: List[String]) = {
     val graphs = sentenceTexts map (_.trim) filter (!_.isEmpty) flatMap { sentence =>
       Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence) map { (sentence, _) }
     }
@@ -72,7 +80,7 @@ object Application extends Controller {
       models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
     }
 
-    views.html.document(models.Document(sentences))
+    models.Document(sentences)
   }
 
   object InputForms {
