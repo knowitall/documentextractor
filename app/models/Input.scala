@@ -7,7 +7,7 @@ abstract class Input {
 
   def sentences: Seq[String] = {
     Input.sentencer.synchronized {
-      Input.sentencer.sentences(text).toList
+      Input.sentencer.sentences(text).toList.map(_.replaceAll("\n", " "))
     }
   }
 }
