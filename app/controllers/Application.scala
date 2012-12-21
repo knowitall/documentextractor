@@ -104,7 +104,7 @@ object Application extends Controller {
       
       val chunked = chunker.chunk(text)
       
-      val reverbExtrs = reverb.extractWithConf(chunked).map{ case (a, b) => (a.get, b) }.toSeq.sortBy(_._1).map { case (conf, extr) =>
+      val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map { case (conf, extr) =>
         Extraction("ReVerb", reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), conf)
       }
       

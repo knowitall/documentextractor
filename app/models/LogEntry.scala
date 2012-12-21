@@ -15,7 +15,7 @@ import anorm.SqlResult
 class LogEntry(val ip: String, val host: Option[String], val timestamp: DateTime, val sentences: Seq[String]) {
   def sentenceSummary = {
     val sentence = sentences(0)
-    if (sentences.length > 20) {
+    if (sentence.length > 20) {
       sentence.take(20) + "..."
     }
     else {
