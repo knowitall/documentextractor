@@ -4,6 +4,8 @@
 
 # Home page
 GET     /                           controllers.Application.index
+GET     /logs                       controllers.Application.logs
+GET     /logentry/:i                controllers.Application.logentry(i: Long)
 POST    /file                       controllers.Application.submitFile
 POST    /text                       controllers.Application.submitText
 POST    /url                        controllers.Application.submitUrl

@@ -1,0 +1,42 @@
+.head {
+  font-weight: bold;
+  width: 150px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: lightgrey;
+  padding: 4px;
+  margin-bottom: 0px;
+}
+.item {
+  width: 144px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: lightgrey;
+  padding: 4px;
+  padding-left: 10px;
+  margin-bottom: 0px;
+}
+.extr-table {
+  border-width: 1px;
+  border-spacing: 0px;
+  border-style: outset;
+  border-color: gray;
+  border-collapse: collapse;
+  background-color: white;
+}
+.extr-th {
+  border-width: 1px;
+  padding: 6px;
+  border-style: inset;
+  border-color: gray;
+  background-color: PowderBlue;
+  -moz-border-radius: 0px 0px 0px 0px;
+}
+.extr-td {
+  border-width: 1px;
+  padding: 6px;
+  border-style: inset;
+  border-color: gray;
+  background-color: white;
+  -moz-border-radius: 0px 0px 0px 0px;
+}

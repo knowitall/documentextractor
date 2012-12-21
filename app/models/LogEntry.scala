@@ -9,38 +9,79 @@ import scala.util.control.Exception.catching
 import java.net.UnknownHostException
 import java.net.InetAddress
 import java.sql.Timestamp
+import anorm.SqlParser.ResultSet
+import anorm.SqlResult
 
-class LogEntry(ip: String, host: Option[String], timestamp: DateTime, sentences: Seq[String]) {
-  /*
-  def from(ip: String, date: DateTime, sentences: Seq[String]) = {
-    LogEntry(ip, date, sentences)
+class LogEntry(val ip: String, val host: Option[String], val timestamp: DateTime, val sentences: Seq[String]) {
+  def sentenceSummary = {
+    val sentence = sentences(0)
+    if (sentences.length > 20) {
+      sentence.take(20) + "..."
+    }
+    else {
+      sentence
+    }
   }
-  */
 
   def save() = {
     DB.withConnection { implicit conn =>
       val s = SQL("insert into LogEntry (ip, host, timestamp, sentences) values ({ip}, {host}, {timestamp}, {sentences})")
         .on(
-            'ip -> "foo",
-            'host -> "bar",
+            'ip -> ip,
+            'host -> host,
             'timestamp -> new Timestamp(timestamp.getMillis()),
             'sentences -> sentences.mkString("\n")
            )
 
-      s.executeInsert()
+      import java.math.BigDecimal
+      s.executeInsert[Option[BigDecimal]](
+          ResultSetParser.singleOpt[BigDecimal](
+              anorm.SqlParser.get[BigDecimal]("1"))) map (_.longValue)
     }
   }
 }
 
-object LogEntry {
-  def get(id: Int) = {
+case class PersistedLogEntry(id: Long, override val ip: String, override val host: Option[String], override val timestamp: DateTime, override val sentences: Seq[String])
+extends LogEntry(ip, host, timestamp, sentences)
 
+object LogEntry {
+  import anorm.SqlParser._
+  private def entryParser = 
+    (long("id") ~ str("ip") ~ str("host") ~ get[java.util.Date]("timestamp") ~ str("sentences") map (flatten) *)
+    
+
+  def find(id: Long = 0) = {
+    DB.withConnection { implicit conn =>
+      conn.setAutoCommit(false)
+      SQL(
+        """select id, ip, host, timestamp, sentences from LogEntry where id = {id}""")
+        .on('id -> id)
+        .as(entryParser)
+    }.headOption.map {
+      case (id, ip, host, timestamp, sentences) =>
+        new PersistedLogEntry(id, ip, Some(host), new DateTime(timestamp), sentences.split("\n"))
+    }
   }
 
-  def fromRequest(/*request: RequestHeader, */sentences: Seq[String]) = {
-    //val remoteIp = request.remoteAddress
-    //val remoteHost = catching(classOf[UnknownHostException]) opt (InetAddress.getByName(remoteIp).getHostName)
+  def all() = {
+    val entries =
+      DB.withConnection { implicit conn =>
+        conn.setAutoCommit(false)
+        SQL(
+          """select id, ip, host, timestamp, sentences from LogEntry""")
+          .as(entryParser)
+      }
+  
+    entries.map {
+      case (id, ip, host, timestamp, sentences) =>
+        new PersistedLogEntry(id, ip, Some(host), new DateTime(timestamp), sentences.split("\n"))
+    }
+  }
 
-    new LogEntry("foo", Some("bar"), DateTime.now, sentences)
+  def fromRequest(request: play.api.mvc.Request[_], sentences: Seq[String]) = {
+    val remoteIp = request.remoteAddress
+    val remoteHost = catching(classOf[UnknownHostException]) opt (InetAddress.getByName(remoteIp).getHostName)
+
+    new LogEntry(remoteIp, remoteHost, DateTime.now, sentences)
   }
 }

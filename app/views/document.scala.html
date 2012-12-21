@@ -1,8 +1,12 @@
-@(document: Document)
+@(document: Document, linkId: Option[Long])
 
 @main("Extractions and Summaries") {
 <h1>Extractions</h1>
 <p>Go back and <a href="@routes.Application.index">try a different input</a>.</p>
+@linkId match{
+  case Some(id) => { <p>Or maybe you want to <a href="@routes.Application.logentry(id)">link to this page.</a></p> }
+  case None => {}
+}
   <ol>
   @for(s <- document.sentences) {
     <li>@sentence(s)</li>

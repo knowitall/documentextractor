@@ -5,8 +5,18 @@
   case NormalChar(c) => {@c} 
 }
 
-<ul>
-@for(extr <- sentence.extractions) {
-  <li>(@extr.arg1.string, @extr.rel.string, @extr.arg2.string)</li>
+<br />
+<table class="extr-table">
+@for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
+    <tr><th colspan="4" class="extr-th">@extractor extractions</th></tr>
+@for(extr <- extrs) {
+    <tr>
+      <td class="extr-td">@{"%.2f" format extr.conf}</td>
+      <td class="extr-td">@extr.arg1.string</td>
+      <td class="extr-td">@extr.rel.string</td>
+      <td class="extr-td">@extr.arg2.string</td>
+    </tr>
+  }
 }
-</ul>
+</table>
+<br />

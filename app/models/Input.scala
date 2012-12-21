@@ -5,7 +5,7 @@ import edu.washington.cs.knowitall.tool.sentence.OpenNlpSentencer
 abstract class Input {
   def text: String
 
-  def sentences = {
+  def sentences: Seq[String] = {
     Input.sentencer.synchronized {
       Input.sentencer.sentences(text).toList
     }

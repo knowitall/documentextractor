@@ -1,0 +1,23 @@
+@(entries: Iterable[PersistedLogEntry])
+
+@main("Document Extractor Logs") {
+    <h1>Document Extractor Logs</h1>
+    <table class="table table-bordered table-striped">
+      <tr>
+        <th></th>
+        <th>IP Address</th>
+        <th>Hostname</th>
+        <th>Timestamp</th>
+        <th>Summary</th>
+      </tr>
+      @for(entry <- entries) {
+        <tr>
+          <td><a href="@routes.Application.logentry(entry.id)">lookup</a></td>
+          <td>@entry.ip</td>
+          <td>@entry.host</td>
+          <td>@entry.timestamp</td>
+          <td>@entry.sentenceSummary</td>
+        </tr>
+      }
+    </table>
+}

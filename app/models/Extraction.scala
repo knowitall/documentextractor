@@ -8,4 +8,4 @@ case class Part(string: String, intervals: Iterable[Interval]) {
     intervals.map(interval => Interval.open(tokens(interval.start).interval.start, tokens(interval.last).interval.end))
   }
 }
-case class Extraction(arg1: Part, rel: Part, arg2: Part, conf: Double)
+case class Extraction(extractor: String, arg1: Part, rel: Part, arg2: Part, conf: Double)

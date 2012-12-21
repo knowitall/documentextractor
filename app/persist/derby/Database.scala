@@ -6,6 +6,10 @@ import edu.washington.cs.knowitall.common.Resource.using
 import anorm._
 
 object Database extends App {
+  def idResultSetParser(implicit extractor: anorm.Column[java.math.BigDecimal]) =
+    ResultSetParser.singleOpt[java.math.BigDecimal](
+      anorm.SqlParser.get[java.math.BigDecimal]("1"))
+      
   def initialize() {
     val driverClass = "org.apache.derby.jdbc.EmbeddedDriver"
     val driver = Class.forName(driverClass).newInstance()
