@@ -23,7 +23,7 @@ class LogEntry(val ip: String, val host: Option[String], val timestamp: DateTime
     }
   }
 
-  def save() = {
+  def persist() = {
     DB.withConnection { implicit conn =>
       val s = SQL("insert into LogEntry (ip, host, timestamp, sentences) values ({ip}, {host}, {timestamp}, {sentences})")
         .on(
