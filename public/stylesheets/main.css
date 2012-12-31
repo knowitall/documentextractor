@@ -32,6 +32,15 @@
   background-color: PowderBlue;
   -moz-border-radius: 0px 0px 0px 0px;
 }
+.extr-th-small {
+  border-width: 1px;
+  padding: 6px;
+  border-style: inset;
+  border-color: gray;
+  background-color: PowderBlue;
+  -moz-border-radius: 0px 0px 0px 0px;
+  font-size: smaller;
+}
 .extr-td {
   border-width: 1px;
   padding: 6px;
