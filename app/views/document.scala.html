@@ -4,6 +4,18 @@
 <h1>Extractions</h1>
 <p>Go back and <a href="@routes.Application.index">try a different input</a>.</p>
   <p>Or maybe you want to <a href="@routes.Application.logentry(entryId)">link to this page.</a></p>
+  <p>
+  <h3>Highlighted document:</h3>
+  @for(s <- document.sentences) {
+    @s.coloredChars.collect{
+      case ColoredChar(color, c) => {<span style="color: @color">@c</span>}
+      case NormalChar(c) => {@c}
+    }
+    <br>
+  }
+  </p>
+
+  <h3>Detailed extractions:</h3>
   <ol>
   @for(s <- document.sentences) {
     <li>@sentence(entryId, s, annotations)</li>
