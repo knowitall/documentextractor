@@ -9,6 +9,14 @@
 <table class="extr-table">
 @for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
     <tr><th colspan="6" class="extr-th">@extractor extractions</th></tr>
+    <tr>
+      <th class="extr-th-small"></th>
+      <th class="extr-th-small">Context</th>
+      <th class="extr-th-small">Argument 1</th>
+      <th class="extr-th-small">Relation</th>
+      <th class="extr-th-small">Argument 2</th>
+      <th class="extr-th-small"></th>
+    </tr>
 @for(extr <- extrs) {
     <tr>
       <td class="extr-td">@{"%.2f" format extr.conf}</td>
