@@ -35,6 +35,9 @@ import edu.washington.cs.knowitall.extractor.R2A2
 import edu.washington.cs.knowitall.chunkedextractor.Nesty
 import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
 import edu.washington.cs.knowitall.chunkedextractor.Relnoun
+import edu.washington.cs.knowitall.ollie.Attribution
+import edu.washington.cs.knowitall.ollie.EnablingCondition
+import edu.washington.cs.knowitall.openparse.extract.ExtendedExtraction
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -131,7 +134,14 @@ object Application extends Controller {
     }
 
     def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
-    def ollieContextPart(extrPart: Context) = models.Part(extrPart.text, Iterable(extrPart.interval))
+    def ollieContextPart(extrPart: Context) = {
+      val prefix = extrPart match {
+        case _: Attribution => "A: "
+        case _: EnablingCondition => "C: "
+        case _ => ""
+      }
+      models.Part(prefix + extrPart.text, Iterable(extrPart.interval))
+    }
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part(extrPart.text, Some(extrPart.interval))
 
     val sentences = graphs map {
@@ -140,7 +150,7 @@ object Application extends Controller {
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
-        val chunked = chunker.chunk(text)
+        val chunked = chunker.chunk(text).toList
 
         val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map {
           case (conf, extr) =>
@@ -149,19 +159,15 @@ object Application extends Controller {
 
         val lemmatized = chunked map MorphaStemmer.lemmatizeToken
 
-        /*
-        val nestyExtrs = nesty.extract(lemmatized).map {
-          case extr =>
-            Extraction("Nesty", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
+        val nestyExtrs = nesty(lemmatized).map { inst =>
+          Extraction("Nesty", Some(models.Part(inst.extr.arg1.text + " " + inst.extr.rel.text, None)), reverbPart(inst.extr.nested.arg1), reverbPart(inst.extr.nested.rel), reverbPart(inst.extr.nested.arg2), 0.0)
         }
-        */
 
-        val relnounExtrs = nesty.extract(lemmatized).map {
-          case extr =>
+        val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
             Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
         }
 
-        val extrs = reverbExtrs ++ ollieExtrs ++ relnounExtrs
+        val extrs = reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ nestyExtrs
 
         models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
     }
