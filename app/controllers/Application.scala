@@ -37,7 +37,7 @@ import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
 import edu.washington.cs.knowitall.chunkedextractor.Relnoun
 import edu.washington.cs.knowitall.ollie.Attribution
 import edu.washington.cs.knowitall.ollie.EnablingCondition
-import edu.washington.cs.knowitall.openparse.extract.ExtendedExtraction
+import edu.washington.cs.knowitall.ollie.NaryExtraction
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -146,7 +146,8 @@ object Application extends Controller {
 
     val sentences = graphs map {
       case (text, graph) =>
-        val ollieExtrs = ollie.extract(graph).map { extr => (extr, ollieConf(extr)) }.toSeq.sortBy(-_._2).map(_._1).map { extr =>
+        val rawOllieExtrs = ollie.extract(graph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
+        val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
@@ -166,8 +167,14 @@ object Application extends Controller {
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
             Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
         }
+        
+        val naryExtrs = NaryExtraction.from(rawOllieExtrs) map { extr =>
+            val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
+            val arg2 = models.Part(suffixText, extr.suffixes.map(_.span))
+            Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
+        }
 
-        val extrs = reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ nestyExtrs
+        val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs
 
         models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
     }
