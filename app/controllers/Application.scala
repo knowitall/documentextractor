@@ -6,18 +6,24 @@ import java.net.MalformedURLException
 import java.net.URL
 import java.net.UnknownHostException
 import scala.Option.option2Iterable
-import scala.annotation.implicitNotFound
 import scala.util.control.Exception
 import scala.util.control.Exception.catching
 import edu.washington.cs.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}
+import edu.washington.cs.knowitall.chunkedextractor.Nesty
 import edu.washington.cs.knowitall.chunkedextractor.ReVerb
+import edu.washington.cs.knowitall.chunkedextractor.Relnoun
+import edu.washington.cs.knowitall.ollie.Attribution
 import edu.washington.cs.knowitall.ollie.Context
+import edu.washington.cs.knowitall.ollie.EnablingCondition
+import edu.washington.cs.knowitall.ollie.NaryExtraction
 import edu.washington.cs.knowitall.ollie.Ollie
 import edu.washington.cs.knowitall.ollie.confidence.OllieConfidenceFunction
 import edu.washington.cs.knowitall.openparse.extract.Extraction.{Part => OlliePart}
 import edu.washington.cs.knowitall.tool.chunk.ChunkedToken
 import edu.washington.cs.knowitall.tool.chunk.OpenNlpChunker
+import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
 import edu.washington.cs.knowitall.tool.parse.MaltParser
+import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
 import models.Annotation
 import models.Extraction
 import models.FileInput
@@ -38,6 +44,7 @@ import edu.washington.cs.knowitall.chunkedextractor.Relnoun
 import edu.washington.cs.knowitall.ollie.Attribution
 import edu.washington.cs.knowitall.ollie.EnablingCondition
 import edu.washington.cs.knowitall.ollie.NaryExtraction
+import edu.washington.cs.knowitall.tool.segment.Segment
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -47,6 +54,7 @@ object Application extends Controller {
   val relnoun = new Relnoun()
   val chunker = new OpenNlpChunker()
   val parser = new MaltParser()
+  val http = dispatch.Http()
 
   def index = Action {
     Ok(views.html.index(InputForms.textForm, InputForms.urlForm, 'text))
@@ -95,18 +103,38 @@ object Application extends Controller {
       input => Ok(process(input)))
   }
 
+  def summarize = Action { implicit request =>
+    import dispatch._
+    import play.api.libs.concurrent.Akka
+    import play.api.Play.current
+
+    val svc = host("rv-n06.cs.washington.edu", 8081) / "servlet" / "edu.washington.cs.knowitall.testing.SummarizationServletSimple"
+    val query = request.body.asFormUrlEncoded.get("query")(0)
+
+    val promiseOfString = Akka.future {
+      Http((svc << Map("query" -> query)) OK as.String).apply().split("\n").filter { sentence =>
+        !sentence.trim.isEmpty
+      }.map { summary =>
+        "<li>" + summary + "</li>"
+      }.mkString("<ol>", "\n", "</ol>")
+    }
+    Async {
+      promiseOfString.map(response => Ok(response))
+    }
+  }
+
   def process(input: Input, id: Option[Long] = None, annotations: Iterable[Annotation] = Iterable.empty)(implicit request: play.api.mvc.Request[_]) = {
-    val sentenceTexts = input.sentences
+    val segments = input.sentences
 
     val entryId =
       id match {
         case Some(id) => id
-        case None => LogEntry.fromRequest(request, sentenceTexts).persist().getOrElse {
+        case None => LogEntry.fromRequest(request, segments.map(_.text)).persist().getOrElse {
           throw new IllegalArgumentException("Could not load entry.")
         }
       }
 
-    views.html.document(buildDocument(sentenceTexts), entryId, annotations)
+    views.html.document(buildDocument(segments), entryId, annotations)
   }
 
   def visitorName(request: play.api.mvc.Request[_]) = {
@@ -128,7 +156,8 @@ object Application extends Controller {
     Ok("Unannotated")
   }
 
-  def buildDocument(sentenceTexts: Seq[String]) = {
+  def buildDocument(segments: Seq[Segment]) = {
+    val sentenceTexts = segments.map(_.text)
     val graphs = sentenceTexts map (_.trim) filter (!_.isEmpty) flatMap { sentence =>
       Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence) map { (sentence, _) }
     }
@@ -167,7 +196,7 @@ object Application extends Controller {
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
             Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
         }
-        
+
         val naryExtrs = NaryExtraction.from(rawOllieExtrs) map { extr =>
             val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
             val arg2 = models.Part(suffixText, extr.suffixes.map(_.span))

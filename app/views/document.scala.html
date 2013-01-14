@@ -16,6 +16,9 @@
     </li>
   }
   </ol>
+  <h3>Summary:</h3>
+  <p id="summary">
+    <img src="@routes.Assets.at("images/spinner.gif")" />
   </p>
 
   <h3>Detailed extractions:</h3>
@@ -50,4 +53,15 @@
             return false;
         }
     )
+
+    var request = $.ajax({
+      url: '@routes.Application.summarize',
+      type: "POST",
+      data: {query: '@(document.sentences.iterator.map(_.text).mkString("\\n").replaceAll("'", "\\\\'"))'},
+      dataType: "html"
+    }).done(function(data) {
+      $("#summary").replaceWith(data)
+    }).fail(function(data, status, error) {
+      $("#summary").replaceWith("Error downloading summaries: " + error)
+    });
 </script>
