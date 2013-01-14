@@ -1,7 +1,6 @@
 package models
 
 import edu.washington.cs.knowitall.tool.tokenize.Token
-import edu.washington.cs.knowitall.tool.coref.Mention
 
 case class Document(sentences: Seq[Sentence])
 case class Sentence(text: String, tokens: Seq[Token], extractions: Seq[Extraction]) {

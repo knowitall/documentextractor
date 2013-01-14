@@ -21,7 +21,6 @@ import edu.washington.cs.knowitall.ollie.confidence.OllieConfidenceFunction
 import edu.washington.cs.knowitall.openparse.extract.Extraction.{Part => OlliePart}
 import edu.washington.cs.knowitall.tool.chunk.ChunkedToken
 import edu.washington.cs.knowitall.tool.chunk.OpenNlpChunker
-import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
 import edu.washington.cs.knowitall.tool.parse.MaltParser
 import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
 import models.Annotation
