@@ -57,7 +57,7 @@
     var request = $.ajax({
       url: '@routes.Application.summarize',
       type: "POST",
-      data: {query: '@(document.sentences.iterator.map(_.text).mkString("\\n").replaceAll("'", "\\\\'"))'},
+      data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.text)).mkString("\\n"))'},
       dataType: "html"
     }).done(function(data) {
       $("#summary").replaceWith(data)

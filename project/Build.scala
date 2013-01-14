@@ -14,12 +14,14 @@ object ApplicationBuild extends Build {
       "edu.washington.cs.knowitall.nlptools" % "nlptools-parse-malt_2.9.2" % "2.3.0",
       "edu.washington.cs.knowitall.nlptools" % "nlptools-chunk-opennlp_2.9.2" % "2.3.0",
       "edu.washington.cs.knowitall.nlptools" % "nlptools-sentence-opennlp_2.9.2" % "2.3.0",
+      "edu.washington.cs.knowitall.nlptools" % "nlptools-coref-stanford_2.9.2" % "2.3.0",
       "net.databinder.dispatch" % "dispatch-core_2.9.2" % "0.9.4",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "net.sourceforge.nekohtml" % "nekohtml" % "1.9.17",
       "xerces" % "xercesImpl" % "2.9.1",
       "joda-time" % "joda-time" % "2.1",
-      "org.apache.derby" % "derby" % "10.9.1.0"
+      "org.apache.derby" % "derby" % "10.9.1.0",
+      "org.apache.commons" % "commons-lang3" % "3.1"
     )
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
