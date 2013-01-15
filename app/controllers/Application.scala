@@ -44,15 +44,18 @@ import edu.washington.cs.knowitall.ollie.Attribution
 import edu.washington.cs.knowitall.ollie.EnablingCondition
 import edu.washington.cs.knowitall.ollie.NaryExtraction
 import edu.washington.cs.knowitall.tool.segment.Segment
+import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
 
 object Application extends Controller {
   val ollie = new Ollie()
   val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
   val reverb = new ReVerb()
+  val r2a2 = new R2A2()
   val nesty = new Nesty()
   val relnoun = new Relnoun()
   val chunker = new OpenNlpChunker()
   val parser = new MaltParser()
+  val coref = new StanfordCoreferenceResolver()
   val http = dispatch.Http()
 
   def index = Action {
@@ -157,8 +160,8 @@ object Application extends Controller {
 
   def buildDocument(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
-    val graphs = sentenceTexts map (_.trim) filter (!_.isEmpty) flatMap { sentence =>
-      Exception.catching(classOf[Exception]) opt parser.dependencyGraph(sentence) map { (sentence, _) }
+    val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
+      Exception.catching(classOf[Exception]) opt parser.dependencyGraph(segment.text) map { (segment, _) }
     }
 
     def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
@@ -173,13 +176,13 @@ object Application extends Controller {
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part(extrPart.text, Some(extrPart.interval))
 
     val sentences = graphs map {
-      case (text, graph) =>
+      case (segment, graph) =>
         val rawOllieExtrs = ollie.extract(graph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
         val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
-        val chunked = chunker.chunk(text).toList
+        val chunked = chunker.chunk(segment.text).toList
 
         val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map {
           case (conf, extr) =>
@@ -204,10 +207,16 @@ object Application extends Controller {
 
         val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs
 
-        models.Sentence(text, graph.nodes.toSeq, extrs.toSeq)
+        models.Sentence(segment, graph.nodes.toSeq, extrs.toSeq)
     }
 
-    models.Document(sentences)
+    val mentions =
+      for {
+        (bestMention, mentions) <- coref.mentions(sentenceTexts.mkString("\n"))
+        mention <- mentions
+      } yield (mention -> bestMention)
+
+    // models.Document(sentences, Map[Mention, Seq[Mention]])
   }
 
   object InputForms {

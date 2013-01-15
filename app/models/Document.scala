@@ -1,9 +1,12 @@
 package models
 
 import edu.washington.cs.knowitall.tool.tokenize.Token
+import edu.washington.cs.knowitall.tool.segment.Segment
+import edu.washington.cs.knowitall.tool.coref.Mention
 
-case class Document(sentences: Seq[Sentence])
-case class Sentence(text: String, tokens: Seq[Token], extractions: Seq[Extraction]) {
+case class Document(sentences: Seq[Sentence], mentions: Map[Mention, String])
+case class Sentence(segment: Segment, tokens: Seq[Token], extractions: Seq[Extraction]) {
+  def text = segment.text
   def coloredChars = {
     val argOffsets = extractions.flatMap(_.arg1.offsets(tokens)) ++ extractions.flatMap(_.arg2.offsets(tokens))
     val relOffsets = extractions.flatMap(_.rel.offsets(tokens))
