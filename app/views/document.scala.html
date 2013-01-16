@@ -8,12 +8,7 @@
   <h3>Highlighted document:</h3>
   <ol>
   @for(s <- document.sentences) {
-    <li>
-    @s.coloredChars.collect{
-      case ColoredChar(color, c) => {<span style="color: @color">@c</span>}
-      case NormalChar(c) => {@c}
-    }
-    </li>
+    <li>@resolvedSentence(s)</li>
   }
   </ol>
   <h3>Summary:</h3>
@@ -30,6 +25,8 @@
 }
 
 <script type="text/javascript">
+    $('.tip').tooltip()
+
     $(".annotate").click(
         function () {
             var link = this
@@ -57,7 +54,7 @@
     var request = $.ajax({
       url: '@routes.Application.summarize',
       type: "POST",
-      data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.text)).mkString("\\n"))'},
+      data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.segment.text)).mkString("\\n"))'},
       dataType: "html"
     }).done(function(data) {
       $("#summary").replaceWith(data)

@@ -45,6 +45,8 @@ import edu.washington.cs.knowitall.ollie.EnablingCondition
 import edu.washington.cs.knowitall.ollie.NaryExtraction
 import edu.washington.cs.knowitall.tool.segment.Segment
 import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
+import edu.washington.cs.knowitall.collection.immutable.Interval
+import edu.washington.cs.knowitall.tool.coref.Substitution
 
 object Application extends Controller {
   val ollie = new Ollie()
@@ -164,16 +166,24 @@ object Application extends Controller {
       Exception.catching(classOf[Exception]) opt parser.dependencyGraph(segment.text) map { (segment, _) }
     }
 
-    def olliePart(extrPart: OlliePart) = models.Part(extrPart.text, extrPart.nodes.map(_.indices))
+    def olliePart(extrPart: OlliePart) = models.Part.create(extrPart.text, extrPart.nodes.map(_.indices))
     def ollieContextPart(extrPart: Context) = {
       val prefix = extrPart match {
         case _: Attribution => "A: "
         case _: EnablingCondition => "C: "
         case _ => ""
       }
-      models.Part(prefix + extrPart.text, Iterable(extrPart.interval))
+      models.Part.create(prefix + extrPart.text, Iterable(extrPart.interval))
     }
-    def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part(extrPart.text, Some(extrPart.interval))
+    def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.interval))
+
+    val mentions = coref.substitutions(sentenceTexts.mkString("\n"))
+
+    val filteredMentions = mentions.filter { case s@Substitution(mention, best) =>
+      !(mentions exists (sub => sub != s && (sub.mention.charInterval intersects mention.charInterval)))
+    }.filter { case s@Substitution(mention, best) =>
+      best.offset < mention.offset
+    }
 
     val sentences = graphs map {
       case (segment, graph) =>
@@ -192,7 +202,7 @@ object Application extends Controller {
         val lemmatized = chunked map MorphaStemmer.lemmatizeToken
 
         val nestyExtrs = nesty(lemmatized).map { inst =>
-          Extraction("Nesty", Some(models.Part(inst.extr.arg1.text + " " + inst.extr.rel.text, None)), reverbPart(inst.extr.nested.arg1), reverbPart(inst.extr.nested.rel), reverbPart(inst.extr.nested.arg2), 0.0)
+          Extraction("Nesty", Some(models.Part.create(inst.extr.arg1.text + " " + inst.extr.rel.text, None)), reverbPart(inst.extr.nested.arg1), reverbPart(inst.extr.nested.rel), reverbPart(inst.extr.nested.arg2), 0.0)
         }
 
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
@@ -201,22 +211,16 @@ object Application extends Controller {
 
         val naryExtrs = NaryExtraction.from(rawOllieExtrs) map { extr =>
             val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
-            val arg2 = models.Part(suffixText, extr.suffixes.map(_.span))
+            val arg2 = models.Part.create(suffixText, extr.suffixes.map(_.span))
             Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
         }
 
         val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs
 
-        models.Sentence(segment, graph.nodes.toSeq, extrs.toSeq)
+        models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), graph.nodes.toSeq, extrs.toSeq)
     }
 
-    val mentions =
-      for {
-        (bestMention, mentions) <- coref.mentions(sentenceTexts.mkString("\n"))
-        mention <- mentions
-      } yield (mention -> bestMention)
-
-    // models.Document(sentences, Map[Mention, Seq[Mention]])
+    models.Document(sentences, filteredMentions)
   }
 
   object InputForms {

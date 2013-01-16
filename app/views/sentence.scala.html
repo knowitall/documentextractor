@@ -1,11 +1,8 @@
 @(entryId: Long, sentence: Sentence, annotations: Iterable[Annotation])
 
-@sentence.coloredChars.collect{
-  case ColoredChar(color, c) => {<span style="color: @color">@c</span>}
-  case NormalChar(c) => {@c} 
-}
 
 <br />
+@coloredSentence(sentence)
 <table class="extr-table">
 @for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
     <tr><th colspan="6" class="extr-th">@extractor extractions</th></tr>
@@ -21,21 +18,21 @@
     <tr>
       <td class="extr-td">@{"%.2f" format extr.conf}</td>
       <td class="extr-td">@extr.context.map(_.string).getOrElse("")</td>
-      <td class="extr-td">@extr.arg1.string</td>
+      <td class="extr-td">@resolvedPart(sentence, extr.arg1)</td>
       <td class="extr-td">@extr.rel.string</td>
       <td class="extr-td">@extr.arg2.string</td>
       <td class="extr-td">
         <span>
         @defining(annotations exists (ann => ann.contains(sentence, extr) && ann.positive)) { annotated =>
-          <a class="annotate" style="display: @if(!annotated){inline}else{none}" href="@routes.Application.annotate(entryId, true, sentence.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-ok-circle"></i></a> 
-          <a class="unannotate" style="display: @if(annotated){inline}else{none}" href="@routes.Application.unannotate(entryId, true, sentence.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-ok-sign"></i></a> 
+          <a class="annotate" style="display: @if(!annotated){inline}else{none}" href="@routes.Application.annotate(entryId, true, sentence.segment.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-ok-circle"></i></a> 
+          <a class="unannotate" style="display: @if(annotated){inline}else{none}" href="@routes.Application.unannotate(entryId, true, sentence.segment.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-ok-sign"></i></a> 
         }
         </span>
 
         <span>
         @defining(annotations exists (ann => ann.contains(sentence, extr) && ann.negative)) { annotated =>
-          <a class="annotate" style="display: @if(!annotated){inline}else{none}" href="@routes.Application.annotate(entryId, false, sentence.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-remove-circle"></i></a> 
-          <a class="unannotate" style="display: @if(annotated){inline}else{none}" href="@routes.Application.unannotate(entryId, false, sentence.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-remove-sign"></i></a> 
+          <a class="annotate" style="display: @if(!annotated){inline}else{none}" href="@routes.Application.annotate(entryId, false, sentence.segment.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-remove-circle"></i></a> 
+          <a class="unannotate" style="display: @if(annotated){inline}else{none}" href="@routes.Application.unannotate(entryId, false, sentence.segment.text, extr.arg1.string, extr.rel.string, extr.arg2.string)"><i class="icon-remove-sign"></i></a> 
         }
         </span>
     </tr>

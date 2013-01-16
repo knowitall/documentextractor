@@ -1,0 +1,6 @@
+@(sentence: Sentence)
+
+@sentence.resolvedStrings.collect{
+    case ResolvedString(actual, best) => {<span class="tip" style="font-weight:bold;font-style:italic;" rel="tooltip" title="@best">@actual</span>}
+    case UnresolvedString(actual) => {@actual}
+}

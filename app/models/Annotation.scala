@@ -23,12 +23,12 @@ class Annotation(val logentryId: Long, val annotation: Boolean, val source: Stri
           anorm.SqlParser.get[BigDecimal]("1"))) map (_.longValue)
     }
   }
-  
+
   def positive = annotation
   def negative = !annotation
-  
+
   def contains(sentence: Sentence, extraction: Extraction) = {
-    this.sentence == sentence.text &&
+    this.sentence == sentence.segment.text &&
       extraction.arg1.string == this.arg1 &&
       extraction.rel.string == this.rel &&
       extraction.arg2.string == this.arg2
@@ -37,7 +37,7 @@ class Annotation(val logentryId: Long, val annotation: Boolean, val source: Stri
 
 object Annotation {
   import anorm.SqlParser._
-  private def annotationParser = 
+  private def annotationParser =
     (long("id") ~ long("logentry_id") ~ bool("annotation") ~ str("source") ~ str("sentence") ~ str("arg1") ~ str("rel") ~ str("arg2") map (flatten) *)
 
   def findAll(logentryId: Long, source: String) = {
@@ -52,7 +52,7 @@ object Annotation {
         new PersistedAnnotation(id, logentryId, judgement, source, sentence, arg1, rel, arg2)
     }
   }
-  
+
   def delete(logentryId: Long, annotation: Boolean, source: String, sentence: String, arg1: String, rel: String, arg2: String) {
     DB.withConnection { implicit conn =>
       SQL("""delete from annotation where logentry_id = {logentryId} and annotation = {annotation} and source = {source} and sentence = {sentence} and arg1 = {arg1} and rel = {rel} and arg2 = {arg2}""")

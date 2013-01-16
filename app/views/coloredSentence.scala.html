@@ -1,0 +1,6 @@
+@(sentence: Sentence)
+
+@sentence.coloredStrings.collect{
+    case ColoredString(color, s) => {<span style="color: @color">@s</span>}
+    case NormalString(s) => {@s}
+}
