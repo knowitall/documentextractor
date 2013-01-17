@@ -14,8 +14,6 @@ case class Part private (string: String, intervals: Iterable[Interval]) {
 
   def substitute(string: String, substitutions: Seq[Substitution]) = {
     var text = string
-    var subs = substitutions
-
     var adjust = 0
     for (substitution <- substitutions) {
       val Substitution(mention, best) = shift(substitution, adjust)
