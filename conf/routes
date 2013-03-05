@@ -11,6 +11,7 @@ POST    /text                       controllers.Application.submitText
 POST    /url                        controllers.Application.submitUrl
 
 POST    /summarize                  controllers.Application.summarize
+POST    /srl                        controllers.Application.srl
 
 GET     /annotate                   controllers.Application.annotate(logentryId: Long, annotation: Boolean, sentence: String, arg1: String, rel: String, arg2: String)
 GET     /unannotate                 controllers.Application.unannotate(logentryId: Long, annotation: Boolean, sentence: String, arg1: String, rel: String, arg2: String)

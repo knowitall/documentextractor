@@ -51,7 +51,7 @@
         }
     )
 
-    var request = $.ajax({
+    $.ajax({
       url: '@routes.Application.summarize',
       type: "POST",
       data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.segment.text)).mkString("\\n"))'},
@@ -60,5 +60,16 @@
       $("#summary").replaceWith(data)
     }).fail(function(data, status, error) {
       $("#summary").replaceWith("Error downloading summaries: " + error)
+    });
+
+    $.ajax({
+      url: '@routes.Application.srl',
+      type: "POST",
+      data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.segment.text)).mkString("\\n"))'},
+      dataType: "html"
+    }).done(function(data) {
+      $("#srl").replaceWith(data)
+    }).fail(function(data, status, error) {
+      $("#srl").replaceWith("Error downloading summaries: " + error)
     });
 </script>

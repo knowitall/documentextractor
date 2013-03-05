@@ -1,30 +1,15 @@
 package models
 
-import edu.washington.cs.knowitall.tool.tokenize.Token
-import edu.washington.cs.knowitall.tool.segment.Segment
-import edu.washington.cs.knowitall.tool.coref.Mention
+import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver
+import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.ResolutionString
 import edu.washington.cs.knowitall.tool.coref.Substitution
+import edu.washington.cs.knowitall.tool.segment.Segment
+import edu.washington.cs.knowitall.tool.tokenize.Token
 
 case class Document(sentences: Seq[Sentence], mentions: Seq[Substitution])
 case class Sentence(segment: Segment, mentions: Seq[Substitution], tokens: Seq[Token], extractions: Seq[Extraction]) {
   def resolvedStrings: Seq[ResolutionString] = {
-    var it = segment.text.zipWithIndex
-    var result = IndexedSeq.empty[ResolutionString]
-
-    for (Substitution(mention, best) <- mentions) {
-      val skip = mention.offset - segment.offset - it.head._2
-      // skip over non-mentions
-      result :+= UnresolvedString(it.take(skip).map(_._1).mkString(""))
-      it = it.drop(skip)
-
-      // drop old mention but keep index
-      val oldMentionIndex = it.head._2
-      it = it.drop(mention.text.size)
-
-      result :+= ResolvedString(mention.text, best.text)
-    }
-
-    result :+ UnresolvedString(it.map(_._1).mkString(""))
+    CoreferenceResolver.resolve(segment.text, mentions)
   }
 
   def coloredStrings: Seq[AnnotatedString] = {
@@ -94,7 +79,3 @@ case class Sentence(segment: Segment, mentions: Seq[Substitution], tokens: Seq[T
 abstract class AnnotatedString(string: String)
 case class ColoredString(color: String, string: String) extends AnnotatedString(string)
 case class NormalString(string: String) extends AnnotatedString(string)
-
-abstract class ResolutionString(string: String)
-case class ResolvedString(actual: String, best: String) extends ResolutionString(actual)
-case class UnresolvedString(string: String) extends ResolutionString(string)

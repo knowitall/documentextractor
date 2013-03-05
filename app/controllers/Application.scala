@@ -47,17 +47,26 @@ import edu.washington.cs.knowitall.tool.segment.Segment
 import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
 import edu.washington.cs.knowitall.collection.immutable.Interval
 import edu.washington.cs.knowitall.tool.coref.Substitution
+import edu.washington.cs.knowitall.tool.parse.ClearParser
+import knowitall.srl.SrlExtractor
+import models.LogInput
 
 object Application extends Controller {
+  final val COREF_ENABLED = false
+
   val ollie = new Ollie()
+  val srlExtractor = new SrlExtractor()
   val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
   val reverb = new ReVerb()
   val r2a2 = new R2A2()
   val nesty = new Nesty()
   val relnoun = new Relnoun()
   val chunker = new OpenNlpChunker()
-  val parser = new MaltParser()
-  val coref = new StanfordCoreferenceResolver()
+  val malt = new MaltParser()
+  val clear = new ClearParser()
+  val coref =
+    if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
+    else None
   val http = dispatch.Http()
 
   def index = Action {
@@ -127,6 +136,26 @@ object Application extends Controller {
     }
   }
 
+  def srl = Action { implicit request =>
+    import dispatch._
+    import play.api.libs.concurrent.Akka
+    import play.api.Play.current
+
+    val svc = host("rv-n07.cs.washington.edu", 8081) / "srl1" / "srlservlet"
+    val query = request.body.asFormUrlEncoded.get("query")(0)
+
+    val promiseOfString = Akka.future {
+      Http((svc << Map("query" -> query)) OK as.String).apply().split("\n").filter { sentence =>
+        !sentence.trim.isEmpty
+      }.map { entry =>
+        "<li>" + entry + "</li>"
+      }.mkString("<ol>", "\n", "</ol>")
+    }
+    Async {
+      promiseOfString.map(response => Ok(response))
+    }
+  }
+
   def process(input: Input, id: Option[Long] = None, annotations: Iterable[Annotation] = Iterable.empty)(implicit request: play.api.mvc.Request[_]) = {
     val segments = input.sentences
 
@@ -163,7 +192,10 @@ object Application extends Controller {
   def buildDocument(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
     val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
-      Exception.catching(classOf[Exception]) opt parser.dependencyGraph(segment.text) map { (segment, _) }
+      val maltGraph = Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
+      val clearGraph = Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
+
+      for (m <- maltGraph; c <- clearGraph) yield (segment, (m, c))
     }
 
     def olliePart(extrPart: OlliePart) = models.Part.create(extrPart.text, extrPart.nodes.map(_.indices))
@@ -177,7 +209,7 @@ object Application extends Controller {
     }
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.interval))
 
-    val mentions = coref.substitutions(sentenceTexts.mkString("\n"))
+    val mentions = coref.map(_.substitutions(sentenceTexts.mkString("\n"))).getOrElse(List.empty)
 
     val filteredMentions = mentions.filter { case s@Substitution(mention, best) =>
       !(mentions exists (sub => sub != s && (sub.mention.charInterval intersects mention.charInterval)))
@@ -186,8 +218,8 @@ object Application extends Controller {
     }
 
     val sentences = graphs map {
-      case (segment, graph) =>
-        val rawOllieExtrs = ollie.extract(graph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
+      case (segment, (maltGraph, clearGraph)) =>
+        val rawOllieExtrs = ollie.extract(maltGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
         val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
@@ -215,9 +247,16 @@ object Application extends Controller {
             Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
         }
 
-        val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs
+        val clearExtrs = srlExtractor(clearGraph).filter(_.arg2s.size > 0).map { extr =>
+          val arg1 = extr.arg1
+          val arg2 = extr.arg2s.map(_.text).mkString("; ")
+          val arg2Interval = Interval.span(extr.arg2s.map(_.interval))
+          Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+        }
 
-        models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), graph.nodes.toSeq, extrs.toSeq)
+        val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs
+
+        models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), maltGraph.nodes.toSeq, extrs.toSeq)
     }
 
     models.Document(sentences, filteredMentions)

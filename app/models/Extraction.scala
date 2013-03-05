@@ -1,12 +1,15 @@
 package models
 
-import edu.washington.cs.knowitall.tool.tokenize.Token
 import edu.washington.cs.knowitall.collection.immutable.Interval
+import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver
+import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.ResolutionString
 import edu.washington.cs.knowitall.tool.coref.Substitution
+import edu.washington.cs.knowitall.tool.tokenize.Token
 
 case class Part private (string: String, intervals: Iterable[Interval]) {
+  println(string)
   def offsets(tokens: Seq[Token]) = {
-    intervals.map(interval => Interval.open(tokens(interval.start).interval.start, tokens(interval.last).interval.end))
+    intervals.map(interval => Interval.open(tokens(interval.start).offsets.start, tokens(interval.last).offsets.end))
   }
   def shift(sub: Substitution, shift: Int) = {
     new Substitution(sub.mention.copy(offset = sub.mention.offset + shift), sub.best.copy(offset = sub.best.offset + shift))
@@ -24,34 +27,6 @@ case class Part private (string: String, intervals: Iterable[Interval]) {
     text
   }
 
-  def resolve(string: String, substitutions: Seq[Substitution]) = {
-    var it = string.zipWithIndex
-    var result = IndexedSeq.empty[ResolutionString]
-
-    var consumedCount = 0
-    for (Substitution(mention, best) <- substitutions) {
-      val skip = mention.offset - consumedCount
-      // skip over non-mentions
-      if (skip > 0) {
-        result :+= UnresolvedString(it.take(skip).map(_._1).mkString(""))
-      }
-      consumedCount += result.size
-      it = it.drop(skip)
-
-      // drop old mention but keep index
-      it = it.drop(mention.text.size)
-      consumedCount += mention.text.size
-
-      result :+= ResolvedString(mention.text, best.text)
-    }
-
-    if (!it.isEmpty) {
-      result :+= UnresolvedString(it.map(_._1).mkString(""))
-    }
-
-    result
-  }
-
   def resolved(s: Sentence): Seq[ResolutionString] = {
     val offsets = this.offsets(s.tokens)
     val mentions = s.mentions map (m => shift(m, -s.segment.offset)) filter (m => offsets exists (o => o superset m.mention.charInterval))
@@ -61,7 +36,7 @@ case class Part private (string: String, intervals: Iterable[Interval]) {
       val substitutions = mentions filter (m => offset superset m.mention.charInterval)
       val text = s.segment.text.substring(offset.start, offset.end)
     } yield {
-      resolve(text, substitutions.map(sub => shift(sub, -offset.start)))
+      CoreferenceResolver.resolve(text, substitutions.map(sub => shift(sub, -offset.start)))
     }
 
     resolutions.flatten

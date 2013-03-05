@@ -3,6 +3,8 @@
 
 <br />
 @coloredSentence(sentence)
+<p><a href="#lund" onclick="$.post('http://stackoverflow.com/questions/3915917/make-a-link-use-post-instead-of-get', { sentence: "@sentence.segment.text"} );">Lund SRL</a></p>
+<p><a href="#lund" onclick="$.post('http://cogcomp.cs.illinois.edu/demo/srl/?id=14', { sentence: "@sentence.segment.text"} );">Illinois SRL</a></p>
 <table class="extr-table">
 @for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
     <tr><th colspan="6" class="extr-th">@extractor extractions</th></tr>
@@ -18,7 +20,7 @@
     <tr>
       <td class="extr-td">@{"%.2f" format extr.conf}</td>
       <td class="extr-td">@extr.context.map(_.string).getOrElse("")</td>
-      <td class="extr-td">@resolvedPart(sentence, extr.arg1)</td>
+      <td class="extr-td">@extr.arg1.string</td>
       <td class="extr-td">@extr.rel.string</td>
       <td class="extr-td">@extr.arg2.string</td>
       <td class="extr-td">
