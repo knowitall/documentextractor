@@ -15,8 +15,8 @@ import anorm.SqlResult
 class LogEntry(val ip: String, val host: Option[String], val timestamp: DateTime, val sentences: Seq[String]) {
   def sentenceSummary = {
     val sentence = sentences(0)
-    if (sentence.length > 20) {
-      sentence.take(20) + "..."
+    if (sentence.length > 60) {
+      sentence.take(60) + "..."
     }
     else {
       sentence
@@ -46,9 +46,9 @@ extends LogEntry(ip, host, timestamp, sentences)
 
 object LogEntry {
   import anorm.SqlParser._
-  private def entryParser = 
+  private def entryParser =
     (long("id") ~ str("ip") ~ str("host") ~ get[java.util.Date]("timestamp") ~ str("sentences") map (flatten) *)
-    
+
 
   def find(id: Long = 0) = {
     DB.withConnection { implicit conn =>
@@ -71,7 +71,7 @@ object LogEntry {
           """select id, ip, host, timestamp, sentences from LogEntry""")
           .as(entryParser)
       }
-  
+
     entries.map {
       case (id, ip, host, timestamp, sentences) =>
         new PersistedLogEntry(id, ip, Some(host), new DateTime(timestamp), sentences.split("\n"))
