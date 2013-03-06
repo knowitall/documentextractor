@@ -7,7 +7,6 @@ import edu.washington.cs.knowitall.tool.coref.Substitution
 import edu.washington.cs.knowitall.tool.tokenize.Token
 
 case class Part private (string: String, intervals: Iterable[Interval]) {
-  println(string)
   def offsets(tokens: Seq[Token]) = {
     intervals.map(interval => Interval.open(tokens(interval.start).offsets.start, tokens(interval.last).offsets.end))
   }
