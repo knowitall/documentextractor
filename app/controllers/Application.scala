@@ -252,7 +252,7 @@ object Application extends Controller {
           val arg2 = extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = Interval.span(extr.arg2s.map(_.interval))
           Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
-        }
+        } ++ relnounExtrs.map(_.copy(extractor = "SRL"))
 
         val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs
 
