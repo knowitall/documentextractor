@@ -1,10 +1,10 @@
 package models
 
-import edu.washington.cs.knowitall.collection.immutable.Interval
-import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver
-import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.ResolutionString
-import edu.washington.cs.knowitall.tool.coref.Substitution
-import edu.washington.cs.knowitall.tool.tokenize.Token
+import edu.knowitall.collection.immutable.Interval
+import edu.knowitall.tool.coref.CoreferenceResolver
+import edu.knowitall.tool.coref.CoreferenceResolver.ResolutionString
+import edu.knowitall.tool.coref.Substitution
+import edu.knowitall.tool.tokenize.Token
 
 case class Part private (string: String, intervals: Iterable[Interval]) {
   def offsets(tokens: Seq[Token]) = {

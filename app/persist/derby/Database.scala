@@ -1,7 +1,7 @@
 package persist.derby
 
 import java.sql.DriverManager
-import edu.washington.cs.knowitall.common.Resource.using
+import edu.knowitall.common.Resource.using
 
 import anorm._
 

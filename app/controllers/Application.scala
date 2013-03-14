@@ -8,21 +8,21 @@ import java.net.UnknownHostException
 import scala.Option.option2Iterable
 import scala.util.control.Exception
 import scala.util.control.Exception.catching
-import edu.washington.cs.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}
-import edu.washington.cs.knowitall.chunkedextractor.Nesty
-import edu.washington.cs.knowitall.chunkedextractor.ReVerb
-import edu.washington.cs.knowitall.chunkedextractor.Relnoun
-import edu.washington.cs.knowitall.ollie.Attribution
-import edu.washington.cs.knowitall.ollie.Context
-import edu.washington.cs.knowitall.ollie.EnablingCondition
-import edu.washington.cs.knowitall.ollie.NaryExtraction
-import edu.washington.cs.knowitall.ollie.Ollie
-import edu.washington.cs.knowitall.ollie.confidence.OllieConfidenceFunction
-import edu.washington.cs.knowitall.openparse.extract.Extraction.{Part => OlliePart}
-import edu.washington.cs.knowitall.tool.chunk.ChunkedToken
-import edu.washington.cs.knowitall.tool.chunk.OpenNlpChunker
-import edu.washington.cs.knowitall.tool.parse.MaltParser
-import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
+import edu.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}
+import edu.knowitall.chunkedextractor.Nesty
+import edu.knowitall.chunkedextractor.ReVerb
+import edu.knowitall.chunkedextractor.Relnoun
+import edu.knowitall.ollie.Attribution
+import edu.knowitall.ollie.Context
+import edu.knowitall.ollie.EnablingCondition
+import edu.knowitall.ollie.NaryExtraction
+import edu.knowitall.ollie.Ollie
+import edu.knowitall.ollie.confidence.OllieConfidenceFunction
+import edu.knowitall.openparse.extract.Extraction.{Part => OlliePart}
+import edu.knowitall.tool.chunk.ChunkedToken
+import edu.knowitall.tool.chunk.OpenNlpChunker
+import edu.knowitall.tool.parse.MaltParser
+import edu.knowitall.tool.stem.MorphaStemmer
 import models.Annotation
 import models.Extraction
 import models.FileInput
@@ -36,18 +36,18 @@ import play.api.data.Forms
 import play.api.data.validation.Constraints.nonEmpty
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import edu.washington.cs.knowitall.extractor.R2A2
-import edu.washington.cs.knowitall.chunkedextractor.Nesty
-import edu.washington.cs.knowitall.tool.stem.MorphaStemmer
-import edu.washington.cs.knowitall.chunkedextractor.Relnoun
-import edu.washington.cs.knowitall.ollie.Attribution
-import edu.washington.cs.knowitall.ollie.EnablingCondition
-import edu.washington.cs.knowitall.ollie.NaryExtraction
-import edu.washington.cs.knowitall.tool.segment.Segment
-import edu.washington.cs.knowitall.tool.coref.StanfordCoreferenceResolver
-import edu.washington.cs.knowitall.collection.immutable.Interval
-import edu.washington.cs.knowitall.tool.coref.Substitution
-import edu.washington.cs.knowitall.tool.parse.ClearParser
+import edu.knowitall.chunkedextractor.R2A2
+import edu.knowitall.chunkedextractor.Nesty
+import edu.knowitall.tool.stem.MorphaStemmer
+import edu.knowitall.chunkedextractor.Relnoun
+import edu.knowitall.ollie.Attribution
+import edu.knowitall.ollie.EnablingCondition
+import edu.knowitall.ollie.NaryExtraction
+import edu.knowitall.tool.segment.Segment
+import edu.knowitall.tool.coref.StanfordCoreferenceResolver
+import edu.knowitall.collection.immutable.Interval
+import edu.knowitall.tool.coref.Substitution
+import edu.knowitall.tool.parse.ClearParser
 import knowitall.srl.SrlExtractor
 import models.LogInput
 
@@ -58,7 +58,6 @@ object Application extends Controller {
   val srlExtractor = new SrlExtractor()
   val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
   val reverb = new ReVerb()
-  val r2a2 = new R2A2()
   val nesty = new Nesty()
   val relnoun = new Relnoun()
   val chunker = new OpenNlpChunker()
@@ -121,7 +120,7 @@ object Application extends Controller {
     import play.api.libs.concurrent.Akka
     import play.api.Play.current
 
-    val svc = host("rv-n06.cs.washington.edu", 8081) / "servlet" / "edu.washington.cs.knowitall.testing.SummarizationServletSimple"
+    val svc = host("rv-n06.cs.washington.edu", 8081) / "servlet" / "edu.knowitall.testing.SummarizationServletSimple"
     val query = request.body.asFormUrlEncoded.get("query")(0)
 
     val promiseOfString = Akka.future {

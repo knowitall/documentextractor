@@ -1,7 +1,7 @@
 @(sentence: Sentence)
 
-@import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.ResolvedString
-@import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.NormalString
+@import edu.knowitall.tool.coref.CoreferenceResolver.ResolvedString
+@import edu.knowitall.tool.coref.CoreferenceResolver.NormalString
 
 @sentence.resolvedStrings.collect{
     case ResolvedString(actual, best) => {<span class="tip" style="font-weight:bold;font-style:italic;" rel="tooltip" title="@best">@actual</span>}

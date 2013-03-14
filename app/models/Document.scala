@@ -1,10 +1,10 @@
 package models
 
-import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver
-import edu.washington.cs.knowitall.tool.coref.CoreferenceResolver.ResolutionString
-import edu.washington.cs.knowitall.tool.coref.Substitution
-import edu.washington.cs.knowitall.tool.segment.Segment
-import edu.washington.cs.knowitall.tool.tokenize.Token
+import edu.knowitall.tool.coref.CoreferenceResolver
+import edu.knowitall.tool.coref.CoreferenceResolver.ResolutionString
+import edu.knowitall.tool.coref.Substitution
+import edu.knowitall.tool.segment.Segment
+import edu.knowitall.tool.tokenize.Token
 
 case class Document(sentences: Seq[Sentence], mentions: Seq[Substitution])
 case class Sentence(segment: Segment, mentions: Seq[Substitution], tokens: Seq[Token], extractions: Seq[Extraction]) {

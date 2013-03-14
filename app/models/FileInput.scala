@@ -1,7 +1,7 @@
 package models
 
 import java.io.File
-import edu.washington.cs.knowitall.common.Resource.using
+import edu.knowitall.common.Resource.using
 import scala.io.Source
 import org.apache.tika.Tika
 import de.l3s.boilerpipe.extractors.ArticleExtractor

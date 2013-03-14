@@ -1,7 +1,7 @@
 package models
 
-import edu.washington.cs.knowitall.tool.sentence.OpenNlpSentencer
-import edu.washington.cs.knowitall.tool.segment.Segment
+import edu.knowitall.tool.sentence.OpenNlpSentencer
+import edu.knowitall.tool.segment.Segment
 
 abstract class Input {
   def text: String
