@@ -31,7 +31,6 @@ object ApplicationBuild extends Build {
 
     val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
       // Add your own project settings here
-      resolvers += "Local Maven Repository" at Path.userHome.asFile.toURI.toURL+"/.m2/repository",
       resolvers += "boilerpipe-m2-repo" at "https://boilerpipe.googlecode.com/svn/repo/",
       resolvers += "sonatype-snapshot" at "https://oss.sonatype.org/content/repositories/snapshots/"
     )
