@@ -191,8 +191,14 @@ object Application extends Controller {
   def buildDocument(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
     val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
-      val maltGraph = Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
-      val clearGraph = Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
+      val maltGraph = 
+        malt.synchronized {
+          Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
+        }
+      val clearGraph = 
+        clear.synchronized {
+          Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
+        }
 
       for (m <- maltGraph; c <- clearGraph) yield (segment, (m, c))
     }
@@ -223,7 +229,9 @@ object Application extends Controller {
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
-        val chunked = chunker.chunk(segment.text).toList
+        val chunked = chunker.synchronized { 
+            chunker.chunk(segment.text).toList
+          }
 
         val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map {
           case (conf, extr) =>
