@@ -247,17 +247,17 @@ object Application extends Controller {
         }
 
         val srlExtractions = srlExtractor(clearGraph)
-        val clearExtrs = srlExtractions.filter(_.arg2s.size > 0).map { extr =>
+        val clearExtrs = srlExtractions.map { extr =>
           val arg1 = extr.arg1
           val arg2 = extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = Interval.span(extr.arg2s.map(_.interval))
+          val arg2Interval = if (extr.arg2s.isEmpty) Interval.empty else Interval.span(extr.arg2s.map(_.interval))
           Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL"))
 
-        val clearTriples = srlExtractions.flatMap(_.triplize(true)).map { extr =>
+        val clearTriples = srlExtractions.filter(_.arg2s.size > 0).flatMap(_.triplize(true)).map { extr =>
           val arg1 = extr.arg1
           val arg2 = extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = Interval.span(extr.arg2s.map(_.interval))
+          val arg2Interval = if (extr.arg2s.isEmpty) Interval.empty else Interval.span(extr.arg2s.map(_.interval))
           Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
