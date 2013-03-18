@@ -66,7 +66,6 @@ object Application extends Controller {
   val coref =
     if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
     else None
-  val http = dispatch.Http()
 
   def index = Action {
     Ok(views.html.index(InputForms.textForm, InputForms.urlForm, 'text))
@@ -80,6 +79,25 @@ object Application extends Controller {
     val source = visitorName(request)
     val annotations = Annotation.findAll(logentryId = id, source = source)
     Ok(process(LogInput(id), Some(id), annotations))
+  }
+
+  def logentryGold(id: Long) = Action { implicit request =>
+    val source = visitorName(request)
+    val annotations = Annotation.findAll(logentryId = id, source = source)
+    val builder = new StringBuilder()
+    for (annotation <- annotations) {
+      val binary = if (annotation.annotation) 1 else 0
+      builder.append(
+        Iterable(
+          binary, 
+          Iterable(annotation.arg1, annotation.rel, annotation.arg2).mkString("(", "; ", ")"),
+          annotation.arg1, 
+          annotation.rel, 
+          annotation.arg2, 
+          annotation.sentence).mkString("\t") + "\n")
+    }
+
+    Ok(builder.toString)
   }
 
   def submitText = Action { implicit request =>
@@ -269,7 +287,9 @@ object Application extends Controller {
           Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
-        val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples
+        val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
+          (extr.extractor, extr.confidence, extr.span.start)
+        }
 
         models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), maltGraph.nodes.toSeq, extrs.toSeq)
     }

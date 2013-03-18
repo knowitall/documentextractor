@@ -57,5 +57,6 @@ object Part {
   }
 }
 case class Extraction(extractor: String, context: Option[Part], arg1: Part, rel: Part, arg2: Part, conf: Double) {
-
+  def confidence = conf
+  def span = Interval.span(rel.intervals ++ arg1.intervals ++ arg2.intervals)
 }
