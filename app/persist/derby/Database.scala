@@ -33,12 +33,12 @@ object Database extends App {
       SQL("""CREATE TABLE Annotation (
                id bigint NOT NULL GENERATED ALWAYS AS IDENTITY,
                logentry_id bigint NOT NULL,
-               source varchar(255) NOT NULL,
+               source varchar(512) NOT NULL,
                annotation boolean NOT NULL,
                sentence varchar(512) NOT NULL,
-               arg1 varchar(128) NOT NULL,
-               rel varchar(128) NOT NULL,
-               arg2 varchar(128) NOT NULL)""").executeUpdate()(conn)
+               arg1 varchar(512) NOT NULL,
+               rel varchar(512) NOT NULL,
+               arg2 varchar(512) NOT NULL)""").executeUpdate()(conn)
     }
   }
 
