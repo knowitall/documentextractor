@@ -90,6 +90,7 @@ object Application extends Controller {
       builder.append(
         Iterable(
           binary, 
+          Iterable(annotation.arg1, annotation.rel, annotation.arg2).mkString("(", "; ", ")"),
           annotation.arg1, 
           annotation.rel, 
           annotation.arg2, 
