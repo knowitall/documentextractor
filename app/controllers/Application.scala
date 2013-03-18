@@ -269,7 +269,9 @@ object Application extends Controller {
           Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
-        val extrs = reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples
+        val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
+          (extr.extractor, extr.confidence, extr.span.start)
+        }
 
         models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), maltGraph.nodes.toSeq, extrs.toSeq)
     }
