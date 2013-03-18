@@ -66,7 +66,6 @@ object Application extends Controller {
   val coref =
     if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
     else None
-  val http = dispatch.Http()
 
   def index = Action {
     Ok(views.html.index(InputForms.textForm, InputForms.urlForm, 'text))
