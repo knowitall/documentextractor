@@ -82,6 +82,24 @@ object Application extends Controller {
     Ok(process(LogInput(id), Some(id), annotations))
   }
 
+  def logentryGold(id: Long) = Action { implicit request =>
+    val source = visitorName(request)
+    val annotations = Annotation.findAll(logentryId = id, source = source)
+    val builder = new StringBuilder()
+    for (annotation <- annotations) {
+      val binary = if (annotation.annotation) 1 else 0
+      builder.append(
+        Iterable(
+          binary, 
+          annotation.arg1, 
+          annotation.rel, 
+          annotation.arg2, 
+          annotation.sentence).mkString("\t") + "\n")
+    }
+
+    Ok(builder.toString)
+  }
+
   def submitText = Action { implicit request =>
     InputForms.textForm.bindFromRequest.fold(
       errors => BadRequest(views.html.index(errors, InputForms.urlForm, 'text)),
