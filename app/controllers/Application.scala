@@ -49,14 +49,18 @@ import edu.knowitall.collection.immutable.Interval
 import edu.knowitall.tool.coref.Substitution
 import edu.knowitall.tool.parse.ClearParser
 import edu.knowitall.srl.SrlExtractor
+import edu.knowitall.srl.confidence.SrlConfidenceFunction
 import models.LogInput
 
 object Application extends Controller {
   final val COREF_ENABLED = false
 
   val ollie = new Ollie()
-  val srlExtractor = new SrlExtractor()
   val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
+
+  val srlExtractor = new SrlExtractor()
+  val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
+
   val reverb = new ReVerb()
   val nesty = new Nesty()
   val relnoun = new Relnoun()
@@ -273,18 +277,19 @@ object Application extends Controller {
         }
 
         val srlExtractions = srlExtractor(clearGraph)
-        val clearExtrs = srlExtractions.map { extr =>
-          val arg1 = extr.arg1
-          val arg2 = extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = if (extr.arg2s.isEmpty) Interval.empty else Interval.span(extr.arg2s.map(_.interval))
-          Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+        val clearExtrs = srlExtractions.map { inst =>
+          val arg1 = inst.extr.arg1
+          val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
+          val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
+          Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL"))
 
-        val clearTriples = srlExtractions.filter(_.arg2s.size > 0).flatMap(_.triplize(true)).map { extr =>
-          val arg1 = extr.arg1
-          val arg2 = extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = if (extr.arg2s.isEmpty) Interval.empty else Interval.span(extr.arg2s.map(_.interval))
-          Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(extr.relation.text, Seq(Interval.span(extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+        val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
+          val conf = srlConf(inst)
+          val arg1 = inst.extr.arg1
+          val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
+          val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
+          Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
         val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
