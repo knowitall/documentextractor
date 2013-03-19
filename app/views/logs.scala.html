@@ -12,7 +12,7 @@
       </tr>
       @for(entry <- entries) {
         <tr>
-          <td><a href="@routes.Application.logentry(entry.id)">lookup</a></td>
+          <td><a href="@routes.Application.logentry(entry.id, None)">lookup</a></td>
           <td>@entry.ip</td>
           <td>@entry.host</td>
           <td>@entry.timestamp</td>

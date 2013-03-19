@@ -5,8 +5,9 @@
 # Home page
 GET     /                           controllers.Application.index
 GET     /logs                       controllers.Application.logs
-GET     /logentry/:i                controllers.Application.logentry(i: Long)
-GET     /logentry/:i/gold           controllers.Application.logentryGold(i: Long)
+GET     /logentry/:i                controllers.Application.logentry(i: Long, name: Option[String] ?= None)
+GET     /logentry/:i/annotate/:name controllers.Application.logentry(i: Long, name: Option[String])
+GET     /logentry/:i/gold/:name     controllers.Application.logentryGold(i: Long, name: Option[String])
 POST    /file                       controllers.Application.submitFile
 POST    /text                       controllers.Application.submitText
 POST    /url                        controllers.Application.submitUrl
@@ -14,8 +15,8 @@ POST    /url                        controllers.Application.submitUrl
 POST    /summarize                  controllers.Application.summarize
 POST    /srl                        controllers.Application.srl
 
-GET     /annotate                   controllers.Application.annotate(logentryId: Long, annotation: Boolean, sentence: String, arg1: String, rel: String, arg2: String)
-GET     /unannotate                 controllers.Application.unannotate(logentryId: Long, annotation: Boolean, sentence: String, arg1: String, rel: String, arg2: String)
+GET     /annotate                   controllers.Application.annotate(logentryId: Long, annotation: Boolean, source: String, sentence: String, arg1: String, rel: String, arg2: String)
+GET     /unannotate                 controllers.Application.unannotate(logentryId: Long, annotation: Boolean, source: String, sentence: String, arg1: String, rel: String, arg2: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

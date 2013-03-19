@@ -79,14 +79,14 @@ object Application extends Controller {
     Ok(views.html.logs(LogEntry.all()))
   }
 
-  def logentry(id: Long) = Action { implicit request =>
-    val source = visitorName(request)
+  def logentry(id: Long, name: Option[String] = None) = Action { implicit request =>
+    val source = visitorName(request, name)
     val annotations = Annotation.findAll(logentryId = id, source = source)
-    Ok(process(LogInput(id), Some(id), annotations))
+    Ok(process(LogInput(id), source, Some(id), annotations))
   }
 
-  def logentryGold(id: Long) = Action { implicit request =>
-    val source = visitorName(request)
+  def logentryGold(id: Long, name: Option[String] = None) = Action { implicit request =>
+    val source = visitorName(request, name)
     val annotations = Annotation.findAll(logentryId = id, source = source)
     val builder = new StringBuilder()
     for (annotation <- annotations) {
@@ -107,12 +107,12 @@ object Application extends Controller {
   def submitText = Action { implicit request =>
     InputForms.textForm.bindFromRequest.fold(
       errors => BadRequest(views.html.index(errors, InputForms.urlForm, 'text)),
-      input => Ok(process(input)))
+      input => Ok(process(input, visitorName(request, None))))
   }
 
   def submitFile = Action(parse.multipartFormData) { request =>
     request.body.file("file").map { file =>
-      Ok(process(FileInput.process(file.ref.file))(request))
+      Ok(process(FileInput.process(file.ref.file), visitorName(request, None))(request))
     }.getOrElse {
       Redirect(routes.Application.index).flashing("error" -> "Missing file")
     }
@@ -134,7 +134,7 @@ object Application extends Controller {
   def submitUrl = Action { implicit request =>
     InputForms.urlForm.bindFromRequest.fold(
       errors => BadRequest(views.html.index(InputForms.textForm, errors, 'url)),
-      input => Ok(process(input)))
+      input => Ok(process(input, visitorName(request, None))))
   }
 
   def summarize = Action { implicit request =>
@@ -177,7 +177,7 @@ object Application extends Controller {
     }
   }
 
-  def process(input: Input, id: Option[Long] = None, annotations: Iterable[Annotation] = Iterable.empty)(implicit request: play.api.mvc.Request[_]) = {
+  def process(input: Input, source: String, id: Option[Long] = None, annotations: Iterable[Annotation] = Iterable.empty)(implicit request: play.api.mvc.Request[_]) = {
     val segments = input.sentences
 
     val entryId =
@@ -188,24 +188,26 @@ object Application extends Controller {
         }
       }
 
-    views.html.document(buildDocument(segments), entryId, annotations)
+    views.html.document(buildDocument(segments), entryId, source, annotations)
   }
 
-  def visitorName(request: play.api.mvc.Request[_]) = {
-    val remoteIp = request.remoteAddress
-    val remoteHost = catching(classOf[UnknownHostException]) opt (InetAddress.getByName(remoteIp).getHostName)
-    remoteHost.getOrElse(remoteIp)
+  def visitorName(request: play.api.mvc.Request[_], name: Option[String]) = {
+    name match {
+      case Some(name) => name
+      case None =>
+        val remoteIp = request.remoteAddress
+        val remoteHost = catching(classOf[UnknownHostException]) opt (InetAddress.getByName(remoteIp).getHostName)
+        remoteHost.getOrElse(remoteIp)
+    }
   }
 
-  def annotate(logentryId: Long, judgement: Boolean, sentence: String, arg1: String, rel: String, arg2: String) = Action { implicit request =>
-    val source = visitorName(request)
+  def annotate(logentryId: Long, judgement: Boolean, source: String, sentence: String, arg1: String, rel: String, arg2: String) = Action { implicit request =>
     val annotation = new Annotation(logentryId, judgement, source, sentence, arg1, rel, arg2)
     annotation.persist()
     Ok("Annotated")
   }
 
-  def unannotate(logentryId: Long, judgement: Boolean, sentence: String, arg1: String, rel: String, arg2: String) = Action { implicit request =>
-    val source = visitorName(request)
+  def unannotate(logentryId: Long, judgement: Boolean, source: String, sentence: String, arg1: String, rel: String, arg2: String) = Action { implicit request =>
     Annotation.delete(logentryId, judgement, source, sentence, arg1, rel, arg2)
     Ok("Unannotated")
   }
