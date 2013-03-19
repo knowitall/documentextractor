@@ -295,7 +295,7 @@ object Application extends Controller {
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
         val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
-          (extr.extractor, extr.confidence, extr.span.start)
+          (extr.extractor, -extr.confidence, -extr.span.start)
         }
 
         models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), maltGraph.nodes.toSeq, extrs.toSeq)
