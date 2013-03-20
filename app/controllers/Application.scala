@@ -297,7 +297,9 @@ object Application extends Controller {
             Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
         }
 
-        val srlExtractions = srlExtractor(clearGraph)
+        val srlExtractions = srlExtractor.synchronized {
+          srlExtractor(clearGraph)
+        }
         val clearExtrs = srlExtractions.map { inst =>
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
