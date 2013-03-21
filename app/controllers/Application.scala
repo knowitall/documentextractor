@@ -55,19 +55,19 @@ import models.LogInput
 object Application extends Controller {
   final val COREF_ENABLED = false
 
-  val ollie = new Ollie()
-  val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
+  lazy val ollie = new Ollie()
+  lazy val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
 
-  val srlExtractor = new SrlExtractor()
-  val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
+  lazy val srlExtractor = new SrlExtractor()
+  lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
 
-  val reverb = new ReVerb()
-  val nesty = new Nesty()
-  val relnoun = new Relnoun()
-  val chunker = new OpenNlpChunker()
-  val malt = new MaltParser()
-  val clear = new ClearParser()
-  val coref =
+  lazy val reverb = new ReVerb()
+  lazy val nesty = new Nesty()
+  lazy val relnoun = new Relnoun()
+  lazy val chunker = new OpenNlpChunker()
+  lazy val malt = new MaltParser()
+  lazy val clear = new ClearParser()
+  lazy val coref =
     if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
     else None
 
@@ -85,6 +85,25 @@ object Application extends Controller {
     Ok(process(LogInput(id), source, Some(id), annotations))
   }
 
+  def logentryImport(id: Long, name: String) = Action { implicit request =>
+    request.body.asText match {
+      case Some(body) =>
+        val lines = body.split("\n")
+        val annotations = lines.map { line =>
+          line.split("\t") match {
+            case Array(a, s, arg1, rel, arg2, sentence) if a == "0" || a == "1" =>
+              new Annotation(id, a == "1", name, sentence, arg1, rel, arg2)
+            case _ => throw new IllegalArgumentException("Malformed import: " + line)
+          }
+        }
+
+        annotations foreach (_.persist())
+
+        Ok("Imported " + lines.length + " lines.\n")
+      case None => Ok("Nothing to import.  Please post data.\n")
+    }
+  }
+
   def logentryGold(id: Long, name: Option[String] = None) = Action { implicit request =>
     val source = visitorName(request, name)
     val annotations = Annotation.findAll(logentryId = id, source = source)
@@ -93,11 +112,11 @@ object Application extends Controller {
       val binary = if (annotation.annotation) 1 else 0
       builder.append(
         Iterable(
-          binary, 
+          binary,
           Iterable(annotation.arg1, annotation.rel, annotation.arg2).mkString("(", "; ", ")"),
-          annotation.arg1, 
-          annotation.rel, 
-          annotation.arg2, 
+          annotation.arg1,
+          annotation.rel,
+          annotation.arg2,
           annotation.sentence).mkString("\t") + "\n")
     }
 
@@ -215,11 +234,11 @@ object Application extends Controller {
   def buildDocument(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
     val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
-      val maltGraph = 
+      val maltGraph =
         malt.synchronized {
           Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
         }
-      val clearGraph = 
+      val clearGraph =
         clear.synchronized {
           Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
         }
@@ -253,7 +272,7 @@ object Application extends Controller {
           Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
-        val chunked = chunker.synchronized { 
+        val chunked = chunker.synchronized {
             chunker.chunk(segment.text).toList
           }
 
