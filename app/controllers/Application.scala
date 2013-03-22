@@ -168,7 +168,6 @@ object Application extends Controller {
 
     val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
       extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
->>>>>>> SRL -> Open IE 4
     }
 
     val text = py.map { case (extractor, points) =>
