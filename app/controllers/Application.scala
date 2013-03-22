@@ -348,7 +348,7 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
+          Extraction("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
 
         val extrs = (reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
