@@ -304,8 +304,8 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("SRL", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
-        } ++ relnounExtrs.map(_.copy(extractor = "SRL"))
+          Extraction("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+        } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4"))
 
         val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
           val conf = srlConf(inst)
