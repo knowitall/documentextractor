@@ -63,7 +63,6 @@ object Application extends Controller {
   lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
 
   lazy val reverb = new ReVerb()
-  lazy val nesty = new Nesty()
   lazy val relnoun = new Relnoun()
   lazy val chunker = new OpenNlpChunker()
   lazy val malt = new MaltParser()
@@ -141,7 +140,35 @@ object Application extends Controller {
     }
 
     val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
-      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).reverse.map { case (conf, annotation) => "%.4f".format(conf) -> annotation })
+      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
+    }
+
+    val text = py.map { case (extractor, points) =>
+      extractor + ":\n" + points.map { case (conf, y, p) => Iterable(conf, y, "%.4f" format p).mkString("\t") }.mkString("\n") + "\n"
+    }.mkString("\n", "\n", "\n")
+
+    Ok(text)
+  }
+
+  def logentryAnnotations(id: Long, name: String) = Action { implicit request =>
+    val annotations = Annotation.findAll(logentryId = id, source = name)
+    val sentences = createSentences(LogInput(id).sentences)
+
+    val data = for {
+      sent <- sentences
+      extr <- sent.extractions
+      annotation <- annotations.find(annotation =>
+          annotation.sentence == sent.text &&
+          annotation.arg1 == extr.arg1.string &&
+          annotation.rel == extr.rel.string &&
+          annotation.arg2 == extr.arg2.string)
+    } yield {
+      extr.extractor -> (extr.conf -> annotation.annotation)
+    }
+
+    val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
+      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
+>>>>>>> SRL -> Open IE 4
     }
 
     val text = py.map { case (extractor, points) =>
@@ -303,18 +330,8 @@ object Application extends Controller {
 
         val lemmatized = chunked map MorphaStemmer.lemmatizeToken
 
-        val nestyExtrs = nesty(lemmatized).map { inst =>
-          Extraction("Nesty", Some(models.Part.create(inst.extr.arg1.text + " " + inst.extr.rel.text, None)), reverbPart(inst.extr.nested.arg1), reverbPart(inst.extr.nested.rel), reverbPart(inst.extr.nested.arg2), 0.0)
-        }
-
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
           Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
-        }
-
-        val naryExtrs = NaryExtraction.from(rawOllieExtrs) map { extr =>
-          val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
-          val arg2 = models.Part.create(suffixText, extr.suffixes.map(_.span))
-          Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
         }
 
         val srlExtractions = srlExtractor.synchronized {
@@ -333,9 +350,9 @@ object Application extends Controller {
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
           Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
-        } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
+        } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
 
-        val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
+        val extrs = (reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
           (extr.extractor, -extr.confidence, -extr.span.start)
         }
 
