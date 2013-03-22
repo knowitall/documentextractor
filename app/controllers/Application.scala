@@ -51,6 +51,7 @@ import edu.knowitall.tool.parse.ClearParser
 import edu.knowitall.srl.SrlExtractor
 import edu.knowitall.srl.confidence.SrlConfidenceFunction
 import models.LogInput
+import edu.knowitall.common.Analysis
 
 object Application extends Controller {
   final val COREF_ENABLED = false
@@ -121,6 +122,33 @@ object Application extends Controller {
     }
 
     Ok(builder.toString)
+  }
+
+  def logentryPy(id: Long, name: String) = Action { implicit request =>
+    val annotations = Annotation.findAll(logentryId = id, source = name)
+    val sentences = createSentences(LogInput(id).sentences)
+
+    val data = for {
+      sent <- sentences
+      extr <- sent.extractions
+      annotation <- annotations.find(annotation =>
+          annotation.sentence == sent.text &&
+          annotation.arg1 == extr.arg1.string &&
+          annotation.rel == extr.rel.string &&
+          annotation.arg2 == extr.arg2.string)
+    } yield {
+      extr.extractor -> (extr.conf -> annotation.annotation)
+    }
+
+    val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
+      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).map { case (conf, annotation) => "%.4f".format(conf) -> annotation })
+    }
+
+    val text = py.map { case (extractor, points) =>
+      extractor + ":\n" + points.map { case (conf, y, p) => Iterable(conf, y, "%.4f" format p).mkString("\t") }.mkString("\n") + "\n"
+    }.mkString("\n", "\n", "\n")
+
+    Ok(text)
   }
 
   def submitText = Action { implicit request =>
@@ -231,7 +259,7 @@ object Application extends Controller {
     Ok("Unannotated")
   }
 
-  def buildDocument(segments: Seq[Segment]) = {
+  def createSentences(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
     val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
       val maltGraph =
@@ -257,15 +285,7 @@ object Application extends Controller {
     }
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.interval))
 
-    val mentions = coref.map(_.substitutions(sentenceTexts.mkString("\n"))).getOrElse(List.empty)
-
-    val filteredMentions = mentions.filter { case s@Substitution(mention, best) =>
-      !(mentions exists (sub => sub != s && (sub.mention.charInterval intersects mention.charInterval)))
-    }.filter { case s@Substitution(mention, best) =>
-      best.offset < mention.offset
-    }
-
-    val sentences = graphs map {
+    graphs map {
       case (segment, (maltGraph, clearGraph)) =>
         val rawOllieExtrs = ollie.extract(maltGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
         val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
@@ -273,8 +293,8 @@ object Application extends Controller {
         }
 
         val chunked = chunker.synchronized {
-            chunker.chunk(segment.text).toList
-          }
+          chunker.chunk(segment.text).toList
+        }
 
         val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map {
           case (conf, extr) =>
@@ -288,13 +308,13 @@ object Application extends Controller {
         }
 
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
-            Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
+          Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
         }
 
         val naryExtrs = NaryExtraction.from(rawOllieExtrs) map { extr =>
-            val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
-            val arg2 = models.Part.create(suffixText, extr.suffixes.map(_.span))
-            Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
+          val suffixText = (extr.suffixes map olliePart).map(_.string).mkString(", ")
+          val arg2 = models.Part.create(suffixText, extr.suffixes.map(_.span))
+          Extraction("Nary", extr.enablers.headOption.orElse(extr.attributions.headOption) map ollieContextPart, olliePart(extr.arg1), olliePart(extr.rel), arg2, 0.0)
         }
 
         val srlExtractions = srlExtractor.synchronized {
@@ -304,7 +324,7 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+          Extraction("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4"))
 
         val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
@@ -312,17 +332,34 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)),  models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))),  models.Part.create(arg2, Seq(arg2Interval)), conf)
+          Extraction("SRL Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "SRL Triples"))
 
         val extrs = (reverbExtrs ++ ollieExtrs ++ naryExtrs ++ relnounExtrs ++ nestyExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
           (extr.extractor, -extr.confidence, -extr.span.start)
         }
 
-        models.Sentence(segment, filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size), maltGraph.nodes.toSeq, extrs.toSeq)
+        // filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size)
+        models.Sentence(segment, Seq.empty, maltGraph.nodes.toSeq, extrs.toSeq)
     }
+  }
 
-    models.Document(sentences, filteredMentions)
+  def buildDocument(segments: Seq[Segment]) = {
+    val sentences = createSentences(segments)
+
+    /*
+    val mentions = coref.map(_.substitutions(sentences.map(_.).mkString("\n"))).getOrElse(List.empty)
+
+    val filteredMentions = mentions.filter {
+      case s @ Substitution(mention, best) =>
+        !(mentions exists (sub => sub != s && (sub.mention.charInterval intersects mention.charInterval)))
+    }.filter {
+      case s @ Substitution(mention, best) =>
+        best.offset < mention.offset
+    }
+    */
+
+    models.Document(sentences, Seq.empty)
   }
 
   object InputForms {

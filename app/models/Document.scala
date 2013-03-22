@@ -8,6 +8,8 @@ import edu.knowitall.tool.tokenize.Token
 
 case class Document(sentences: Seq[Sentence], mentions: Seq[Substitution])
 case class Sentence(segment: Segment, mentions: Seq[Substitution], tokens: Seq[Token], extractions: Seq[Extraction]) {
+  def text = segment.text
+
   def resolvedStrings: Seq[ResolutionString] = {
     CoreferenceResolver.resolve(segment.text, mentions)
   }

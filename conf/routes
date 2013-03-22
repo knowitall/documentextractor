@@ -8,6 +8,7 @@ GET     /logs                       controllers.Application.logs
 GET     /logentry/:i                controllers.Application.logentry(i: Long, name: Option[String] ?= None)
 GET     /logentry/:i/annotate/:name controllers.Application.logentry(i: Long, name: Option[String])
 GET     /logentry/:i/gold/:name     controllers.Application.logentryGold(i: Long, name: Option[String])
+GET     /logentry/:i/py/:name       controllers.Application.logentryPy(i: Long, name: String)
 POST    /logentry/:i/import/:name   controllers.Application.logentryImport(i: Long, name: String)
 POST    /file                       controllers.Application.submitFile
 POST    /text                       controllers.Application.submitText
