@@ -9,6 +9,7 @@ GET     /logentry/:i                controllers.Application.logentry(i: Long)
 GET     /logentry/:i/annotate/:name controllers.Application.logentryName(i: Long, name: String)
 GET     /logentry/:i/gold/:name     controllers.Application.logentryGold(i: Long, name: String)
 GET     /logentry/:i/py/:name       controllers.Application.logentryPy(i: Long, name: String)
+GET     /logentry/:i/graph/:name    controllers.Application.logentryPyGraph(i: Long, name: String)
 POST    /logentry/:i/import/:name   controllers.Application.logentryImport(i: Long, name: String)
 POST    /file                       controllers.Application.submitFile
 POST    /text                       controllers.Application.submitText

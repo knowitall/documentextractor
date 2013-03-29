@@ -26,7 +26,8 @@ object ApplicationBuild extends Build {
       "xerces" % "xercesImpl" % "2.9.1",
       "joda-time" % "joda-time" % "2.2",
       "org.apache.derby" % "derby" % "10.9.1.0",
-      "org.apache.commons" % "commons-lang3" % "3.1"
+      "org.apache.commons" % "commons-lang3" % "3.1",
+      "com.github.wookietreiber" %% "scala-chart" % "latest.integration"
     )
 
     val main = play.Project(appName, appVersion, appDependencies).settings(

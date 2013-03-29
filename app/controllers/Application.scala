@@ -1,5 +1,7 @@
 package controllers
 
+import java.io.BufferedInputStream
+import java.io.FileInputStream
 import java.io.File
 import java.net.InetAddress
 import java.net.MalformedURLException
@@ -8,6 +10,7 @@ import java.net.UnknownHostException
 import scala.Option.option2Iterable
 import scala.util.control.Exception
 import scala.util.control.Exception.catching
+import edu.knowitall.common.Resource
 import edu.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}
 import edu.knowitall.chunkedextractor.Nesty
 import edu.knowitall.chunkedextractor.ReVerb
@@ -21,7 +24,7 @@ import edu.knowitall.ollie.confidence.OllieConfidenceFunction
 import edu.knowitall.openparse.extract.Extraction.{Part => OlliePart}
 import edu.knowitall.tool.chunk.ChunkedToken
 import edu.knowitall.tool.chunk.OpenNlpChunker
-import edu.knowitall.tool.parse.MaltParser
+import edu.knowitall.tool.parse.RemoteDependencyParser
 import edu.knowitall.tool.stem.MorphaStemmer
 import models.Annotation
 import models.Extraction
@@ -47,7 +50,8 @@ import edu.knowitall.tool.segment.Segment
 import edu.knowitall.tool.coref.StanfordCoreferenceResolver
 import edu.knowitall.collection.immutable.Interval
 import edu.knowitall.tool.coref.Substitution
-import edu.knowitall.tool.parse.ClearParser
+import edu.knowitall.tool.srl.RemoteSrl
+import edu.knowitall.tool.srl.ClearSrl
 import edu.knowitall.srl.SrlExtractor
 import edu.knowitall.srl.confidence.SrlConfidenceFunction
 import models.LogInput
@@ -60,14 +64,15 @@ object Application extends Controller {
   lazy val ollie = new Ollie()
   lazy val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
 
-  lazy val srlExtractor = new SrlExtractor()
+  lazy val srlExtractor = new SrlExtractor(clearSrl)
   lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
 
   lazy val reverb = new ReVerb()
   lazy val relnoun = new Relnoun()
   lazy val chunker = new OpenNlpChunker()
-  lazy val malt = new MaltParser()
-  lazy val clear = new ClearParser()
+  lazy val malt = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8002") // new MaltParser()
+  lazy val clear = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8001") // new ClearParser()
+  lazy val clearSrl = new RemoteSrl("http://rv-n16.cs.washington.edu:8011") // new ClearSrl()
   lazy val coref =
     if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
     else None
@@ -152,6 +157,44 @@ object Application extends Controller {
     }.mkString("\n", "\n", "\n")
 
     Ok(text)
+  }
+
+  def logentryPyGraph(id: Long, name: String) = Action { implicit request =>
+    val annotations = Annotation.findAll(logentryId = id, source = name)
+    val sentences = createSentences(LogInput(id).sentences)
+
+    val data = for {
+      sent <- sentences
+      extr <- sent.extractions
+      annotation <- annotations.find(annotation =>
+          annotation.sentence == sent.text &&
+          annotation.arg1 == extr.arg1.string &&
+          annotation.rel == extr.rel.string &&
+          annotation.arg2 == extr.arg2.string)
+    } yield {
+      extr.extractor -> (extr.conf -> annotation.annotation)
+    }
+
+    val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
+      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(-_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
+    }
+
+    import scalax.chart._
+    import scalax.chart.Charting._
+    var files: List[String] = List.empty
+    val points = py.map { case (extractor, points) => (extractor, points.map { case (conf, p, y) => (p, y) }) }
+    val dataset = points.toCategoryTableXYDataset
+    val chart = XYLineChart(dataset, title = "Precision - Yield", domainAxisLabel = "Yield", rangeAxisLabel = "Precision")
+    val temp = File.createTempFile("temp",".png");
+
+    // save as file and read bytes
+    chart.saveAsPNG(temp, (1024,768))
+    val bytes = Resource.using(new BufferedInputStream(new FileInputStream(temp))) { bis =>
+        Stream.continually(bis.read).takeWhile(-1 !=).map(_.toByte).toArray
+      }
+    temp.delete()
+
+    Ok(bytes).as("image/png")
   }
 
   def logentryAnnotations(id: Long, name: String) = Action { implicit request =>
