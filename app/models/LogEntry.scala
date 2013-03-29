@@ -1,10 +1,10 @@
 package models
 
 import org.joda.time.DateTime
-import play.api.db.DB
 import play.api.Play.current
 import anorm._
 import play.api.mvc.RequestHeader
+import play.api.db.DB
 import scala.util.control.Exception.catching
 import java.net.UnknownHostException
 import java.net.InetAddress

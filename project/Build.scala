@@ -10,7 +10,7 @@ object ApplicationBuild extends Build {
     val nlptoolsVersion = "2.4.1-SNAPSHOT"
     val nlptoolsGroupId = "edu.washington.cs.knowitall.nlptools"
 
-    val appDependencies = Seq(
+    val appDependencies = Seq(jdbc, anorm,
       "edu.washington.cs.knowitall.ollie" %% "ollie-core" % "1.0.3-SNAPSHOT",
       "edu.washington.cs.knowitall.chunkedextractor" %% "chunkedextractor" % "1.0.3-SNAPSHOT",
       "org.apache.tika" % "tika-app" % "1.2",

@@ -52,6 +52,7 @@ import edu.knowitall.srl.SrlExtractor
 import edu.knowitall.srl.confidence.SrlConfidenceFunction
 import models.LogInput
 import edu.knowitall.common.Analysis
+import play.api.libs.concurrent.Execution.Implicits._
 
 object Application extends Controller {
   final val COREF_ENABLED = false
@@ -79,7 +80,10 @@ object Application extends Controller {
     Ok(views.html.logs(LogEntry.all()))
   }
 
-  def logentry(id: Long, name: Option[String] = None) = Action { implicit request =>
+  def logentryName(id: Long, name: String) = logentry(id, Some(name))
+  def logentry(id: Long): play.api.mvc.Action[play.api.mvc.AnyContent] = logentry(id, None)
+
+  def logentry(id: Long, name: Option[String]) = Action { implicit request =>
     val source = visitorName(request, name)
     val annotations = Annotation.findAll(logentryId = id, source = source)
     Ok(process(LogInput(id), source, Some(id), annotations))
@@ -104,8 +108,8 @@ object Application extends Controller {
     }
   }
 
-  def logentryGold(id: Long, name: Option[String] = None) = Action { implicit request =>
-    val source = visitorName(request, name)
+  def logentryGold(id: Long, name: String) = Action { implicit request =>
+    val source = name
     val annotations = Annotation.findAll(logentryId = id, source = source)
     val builder = new StringBuilder()
     for (annotation <- annotations) {

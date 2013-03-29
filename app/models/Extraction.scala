@@ -32,8 +32,8 @@ case class Part private (string: String, intervals: Iterable[Interval]) {
 
     val resolutions = for {
       offset <- offsets.toSeq
-      val substitutions = mentions filter (m => offset superset m.mention.charInterval)
-      val text = s.segment.text.substring(offset.start, offset.end)
+      substitutions = mentions filter (m => offset superset m.mention.charInterval)
+      text = s.segment.text.substring(offset.start, offset.end)
     } yield {
       CoreferenceResolver.resolve(text, substitutions.map(sub => shift(sub, -offset.start)))
     }

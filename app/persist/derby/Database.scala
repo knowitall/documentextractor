@@ -18,10 +18,10 @@ object Database extends App {
     using(DriverManager.getConnection(protocol + ";create=true")) { conn =>
       try {
         SQL("""DROP TABLE LogEntry""").executeUpdate()(conn)
-      } catch { case e => }
+      } catch { case e: Throwable => }
       try {
         SQL("""DROP TABLE Annotation""").executeUpdate()(conn)
-      } catch { case e => }
+      } catch { case e: Throwable => }
       SQL("""CREATE TABLE LogEntry (
             id bigint NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1),
             ip varchar(255) NOT NULL,
