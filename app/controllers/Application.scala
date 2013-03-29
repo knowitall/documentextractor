@@ -183,7 +183,7 @@ object Application extends Controller {
     import scalax.chart.Charting._
     var files: List[String] = List.empty
     val points = py.map { case (extractor, points) => (extractor, points.map { case (conf, p, y) => (p, y) }) }
-    val dataset = points.toCategoryTableXYDataset
+    val dataset = points.toXYSeriesCollection
     val chart = XYLineChart(dataset, title = "Precision - Yield", domainAxisLabel = "Yield", rangeAxisLabel = "Precision")
     val temp = File.createTempFile("temp",".png");
 
