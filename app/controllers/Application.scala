@@ -115,7 +115,7 @@ object Application extends Controller {
 
   def logentryGold(id: Long, name: String) = Action { implicit request =>
     val source = name
-    val annotations = Annotation.findAll(logentryId = id, source = source)
+    val annotations = Annotation.findAll(logentryId = id, source = source).sortBy(_.sentence)
     val builder = new StringBuilder()
     for (annotation <- annotations) {
       val binary = if (annotation.annotation) 1 else 0
@@ -198,7 +198,7 @@ object Application extends Controller {
   }
 
   def logentryAnnotations(id: Long, name: String) = Action { implicit request =>
-    val annotations = Annotation.findAll(logentryId = id, source = name)
+    val annotations = Annotation.findAll(logentryId = id, source = name).sortBy(_.sentence)
     val sentences = createSentences(LogInput(id).sentences)
 
     val data = for {
