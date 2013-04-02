@@ -70,7 +70,6 @@ object Application extends Controller {
   lazy val reverb = new ReVerb()
   lazy val relnoun = new Relnoun()
   lazy val chunker = new OpenNlpChunker()
-  lazy val stanfordParser = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8003") // new StanfordParser()
   lazy val malt = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8002") // new MaltParser()
   lazy val clear = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8001") // new ClearParser()
   lazy val clearSrl = new RemoteSrl("http://rv-n16.cs.washington.edu:8011") // new ClearSrl()
@@ -344,12 +343,8 @@ object Application extends Controller {
         clear.synchronized {
           Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
         }
-      val stanfordGraph =
-        stanfordParser.synchronized {
-          Exception.catching(classOf[Exception]) opt stanfordParser.dependencyGraph(segment.text)
-        }
 
-      for (m <- maltGraph; c <- clearGraph; s <- stanfordGraph) yield (segment, (m, c, s))
+      for (m <- maltGraph; c <- clearGraph) yield (segment, (m, c))
     }
 
     def olliePart(extrPart: OlliePart) = models.Part.create(extrPart.text, extrPart.nodes.map(_.indices))
@@ -364,15 +359,10 @@ object Application extends Controller {
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.interval))
 
     graphs map {
-      case (segment, (maltGraph, clearGraph, stanfordGraph)) =>
+      case (segment, (maltGraph, clearGraph)) =>
         val rawOllieExtrs = ollie.extract(maltGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
         val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
-          Extraction("Ollie-Malt", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
-        }
-
-        val rawOllieStanfordExtrs = ollie.extract(stanfordGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
-        val ollieStanfordExtrs = rawOllieStanfordExtrs.map(_._2).map { extr =>
-          Extraction("Ollie-Stanford", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
+          Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
         val chunked = chunker.synchronized {
@@ -408,7 +398,7 @@ object Application extends Controller {
           Extraction("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
 
-        val extrs = (reverbExtrs ++ ollieExtrs ++ ollieStanfordExtrs ++ relnounExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
+        val extrs = (reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
           (extr.extractor, -extr.confidence, -extr.span.start)
         }
 
