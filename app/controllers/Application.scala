@@ -153,7 +153,9 @@ object Application extends Controller {
     }
 
     val text = py.map { case (extractor, points) =>
-      extractor + ":\n" + points.map { case (conf, y, p) => Iterable(conf, y, "%.4f" format p).mkString("\t") }.mkString("\n") + "\n"
+      extractor + ":\n" +
+        "auc = " + Analysis.areaUnderCurve(points.map { case (conf, p, y) => (p, y) }) + "\n"
+        points.map { case (conf, y, p) => Iterable(conf, y, "%.4f" format p).mkString("\t") }.mkString("\n") + "\n"
     }.mkString("\n", "\n", "\n")
 
     Ok(text)
