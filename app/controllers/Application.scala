@@ -54,6 +54,7 @@ import edu.knowitall.tool.srl.RemoteSrl
 import edu.knowitall.tool.srl.ClearSrl
 import edu.knowitall.srl.SrlExtractor
 import edu.knowitall.srl.confidence.SrlConfidenceFunction
+import edu.knowitall.srl.confidence.SrlFeatureSet
 import models.LogInput
 import edu.knowitall.common.Analysis
 import play.api.libs.concurrent.Execution.Implicits._
@@ -379,7 +380,7 @@ object Application extends Controller {
         val lemmatized = chunked map MorphaStemmer.lemmatizeToken
 
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
-          Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.0)
+          Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.9)
         }
 
         val srlExtractions = srlExtractor.synchronized {
