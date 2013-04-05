@@ -5,22 +5,26 @@
 @sentence.segment.text
 <table class="extr-table">
 @for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
-    <tr><th colspan="6" class="extr-th">@extractor extractions</th></tr>
+    <tr><th colspan="8" class="extr-th">@extractor extractions</th></tr>
     <tr>
       <th class="extr-th-small"></th>
+      <th class="extr-th-small">Attributes</th>
       <th class="extr-th-small">Context</th>
       <th class="extr-th-small">Argument 1</th>
       <th class="extr-th-small">Relation</th>
-      <th class="extr-th-small">Argument 2</th>
+      <th class="extr-th-small">Argument 2s</th>
+      <th class="extr-th-small">Semantic Arguments</th>
       <th class="extr-th-small"></th>
     </tr>
 @for(extr <- extrs) {
     <tr>
       <td class="extr-td">@{"%.2f" format extr.conf}</td>
+      <td class="extr-td">@if(extr.attributes.isEmpty){}else{@extr.attributes.iterator.map(_.string).mkString("{", "; ", "}")}</td>
       <td class="extr-td">@extr.context.map(_.string).getOrElse("")</td>
       <td class="extr-td">@extr.arg1.string</td>
       <td class="extr-td">@extr.rel.string</td>
       <td class="extr-td">@extr.arg2.string</td>
+      <td class="extr-td">@extr.semanticArgs.iterator.map(_.displayString).mkString("; ")</td>
       <td class="extr-td">
         <span>
         @defining(annotations exists (ann => ann.contains(sentence, extr) && ann.positive)) { annotated =>

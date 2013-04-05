@@ -57,7 +57,7 @@ object Part {
   }
 }
 case class SemanticPart(semantics: String, part: Part) {
-  def displayString = semantics + "[" + part.string + "]"
+  def displayString = semantics + ":\"" + part.string + "\""
 }
 case class Attribute(string: String)
 object ActiveAttribute extends Attribute("active")

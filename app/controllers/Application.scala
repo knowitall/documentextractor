@@ -58,6 +58,7 @@ import edu.knowitall.srl.confidence.SrlFeatureSet
 import models.LogInput
 import edu.knowitall.common.Analysis
 import play.api.libs.concurrent.Execution.Implicits._
+import edu.knowitall.srl.SrlExtraction
 
 object Application extends Controller {
   final val COREF_ENABLED = false
@@ -382,11 +383,46 @@ object Application extends Controller {
         }
         val clearExtrs = srlExtractions.map { inst =>
           val arg1 = inst.extr.arg1
-          val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction.fromTriple("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+          val arg2s: Map[Class[_], Seq[SrlExtraction.Argument]] = inst.extr.arg2s.groupBy(_.getClass)
+          val conf = srlConf(inst)
+
+          val vanillaArg2s = arg2s.getOrElse(classOf[SrlExtraction.Argument], Seq.empty)
+          val vanillaArg2Parts = vanillaArg2s.map { arg2 =>
+            models.Part.create(arg2.text, Seq(arg2.interval))
+          }
+
+          val semanticArg2Parts: Seq[models.SemanticPart] = arg2s.filter { case (key, value) =>
+            key != classOf[SrlExtraction.Argument]
+          }.flatMap { case (key, values) =>
+              values.map { value =>
+                val semantics = key match {
+                  case x if x == classOf[SrlExtraction.LocationArgument] => "spatial"
+                  case x if x == classOf[SrlExtraction.TemporalArgument] => "temporal"
+                  case x => throw new IllegalArgumentException("Unknown semantic argument type: " + x)
+                }
+
+                val part = models.Part.create(value.text, Seq(value.interval))
+                models.SemanticPart(semantics, part)
+              }
+          }.toSeq
+
+          val attributes = Seq(
+            if (inst.extr.passive) Some(models.PassiveAttribute) else None,
+            if (inst.extr.active) Some(models.ActiveAttribute) else None,
+            if (inst.extr.negated) Some(models.NegativeAttribute) else None
+          ).flatten
+
+          Extraction("Open IE 4",
+              context = None,
+              attributes = attributes,
+              arg1 = models.Part.create(arg1.text, Seq(arg1.interval)),
+              rel = models.Part.create(inst.extr.relation.text, Seq(inst.extr.relation.span)),
+              arg2s = vanillaArg2Parts,
+              semanticArgs = semanticArg2Parts,
+              conf = conf)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4"))
 
+        /*
         val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
           val conf = srlConf(inst)
           val arg1 = inst.extr.arg1
@@ -394,6 +430,7 @@ object Application extends Controller {
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
           Extraction.fromTriple("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
+        */
 
         val extrs = (ollieExtrs ++ clearExtrs).toSeq.sortBy { extr =>
           (extr.extractor, -extr.confidence, -extr.span.start)
