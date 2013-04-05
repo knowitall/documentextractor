@@ -68,7 +68,6 @@ object Application extends Controller {
   lazy val srlExtractor = new SrlExtractor(clearSrl)
   lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
 
-  lazy val reverb = new ReVerb()
   lazy val relnoun = new Relnoun()
   lazy val chunker = new OpenNlpChunker()
   lazy val malt = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8002") // new MaltParser()
@@ -365,22 +364,17 @@ object Application extends Controller {
       case (segment, (maltGraph, clearGraph)) =>
         val rawOllieExtrs = ollie.extract(maltGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
         val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
-          Extraction("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
+          Extraction.fromTriple("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
         }
 
         val chunked = chunker.synchronized {
           chunker.chunk(segment.text).toList
         }
 
-        val reverbExtrs = reverb.extractWithConfidence(chunked).toSeq.sortBy(_._1).map {
-          case (conf, extr) =>
-            Extraction("ReVerb", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), conf)
-        }
-
         val lemmatized = chunked map MorphaStemmer.lemmatizeToken
 
         val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
-          Extraction("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.9)
+          Extraction.fromTriple("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.9)
         }
 
         val srlExtractions = srlExtractor.synchronized {
@@ -390,7 +384,7 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), 0.0)
+          Extraction.fromTriple("Open IE 4", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), 0.0)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4"))
 
         val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
@@ -398,10 +392,10 @@ object Application extends Controller {
           val arg1 = inst.extr.arg1
           val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
           val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
+          Extraction.fromTriple("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
         } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
 
-        val extrs = (reverbExtrs ++ ollieExtrs ++ relnounExtrs ++ clearExtrs ++ clearTriples).toSeq.sortBy { extr =>
+        val extrs = (ollieExtrs ++ clearExtrs).toSeq.sortBy { extr =>
           (extr.extractor, -extr.confidence, -extr.span.start)
         }
 
