@@ -19,7 +19,7 @@ object ApplicationBuild extends Build {
       nlptoolsGroupId %% "nlptools-chunk-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-sentence-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-coref-stanford" % nlptoolsVersion,
-      "edu.washington.cs.knowitall.openiesrl" %% "openie-srl" % "1.0-SNAPSHOT",
+      "edu.washington.cs.knowitall.openiesrl" %% "openie-srl" % "1.0-SNAPSHOT" exclude("com.codecommit", "anti-xml_2.9.1"),
       "net.databinder.dispatch" %% "dispatch-core" % "0.9.5",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "net.sourceforge.nekohtml" % "nekohtml" % "1.9.18",
