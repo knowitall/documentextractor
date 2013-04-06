@@ -359,7 +359,7 @@ object Application extends Controller {
       }
       models.Part.create(prefix + extrPart.text, Iterable(extrPart.interval))
     }
-    def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.interval))
+    def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.tokenInterval))
 
     graphs map {
       case (segment, (maltGraph, clearGraph)) =>
@@ -412,8 +412,16 @@ object Application extends Controller {
             if (inst.extr.negated) Some(models.NegativeAttribute) else None
           ).flatten
 
+          val context = {
+            inst.extr.context.map { context =>
+              val tokens = context.tokens
+              val text = context.text
+              models.Part.create(text, context.intervals)
+            }
+          }
+
           Extraction("Open IE 4",
-              context = None,
+              context = context,
               attributes = attributes,
               arg1 = models.Part.create(arg1.text, Seq(arg1.interval)),
               rel = models.Part.create(inst.extr.relation.text, Seq(inst.extr.relation.span)),
