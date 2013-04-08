@@ -276,27 +276,10 @@ object Application extends Controller {
       }.mkString("<ol>", "\n", "</ol>")
     }
     Async {
-      promiseOfString.map(response => Ok(response))
-    }
-  }
-
-  def srl = Action { implicit request =>
-    import dispatch._
-    import play.api.libs.concurrent.Akka
-    import play.api.Play.current
-
-    val svc = host("rv-n07.cs.washington.edu", 8081) / "srl1" / "srlservlet"
-    val query = request.body.asFormUrlEncoded.get("query")(0)
-
-    val promiseOfString = Akka.future {
-      Http((svc << Map("query" -> query)) OK as.String).apply().split("\n").filter { sentence =>
-        !sentence.trim.isEmpty
-      }.map { entry =>
-        "<li>" + entry + "</li>"
-      }.mkString("<ol>", "\n", "</ol>")
-    }
-    Async {
-      promiseOfString.map(response => Ok(response))
+      promiseOfString.map(response => Ok(response)).recover { case e: Exception =>
+        System.err.println("Could not communicate with summarization host '" + svc.url + "'. Error: " + e.getMessage)
+        Ok("Error: could not communicate with server: " + svc.url)
+      }
     }
   }
 
