@@ -23,7 +23,7 @@
       <td class="extr-td">@extr.context.map(_.string).getOrElse("")</td>
       <td class="extr-td">@extr.arg1.string</td>
       <td class="extr-td">@extr.rel.string</td>
-      <td class="extr-td">@extr.arg2.string</td>
+      <td class="extr-td">@extr.arg2s.map(_.string).mkString("; ")</td>
       <td class="extr-td">@extr.semanticArgs.iterator.map(_.displayString).mkString("; ")</td>
       <td class="extr-td">
         <span>
