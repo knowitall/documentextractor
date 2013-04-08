@@ -352,12 +352,7 @@ object Application extends Controller {
 
     def olliePart(extrPart: OlliePart) = models.Part.create(extrPart.text, extrPart.nodes.map(_.indices))
     def ollieContextPart(extrPart: Context) = {
-      val prefix = extrPart match {
-        case _: Attribution => "A: "
-        case _: EnablingCondition => "C: "
-        case _ => ""
-      }
-      models.Part.create(prefix + extrPart.text, Iterable(extrPart.interval))
+      models.Part.create(extrPart.text, Iterable(extrPart.interval))
     }
     def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.tokenInterval))
 
