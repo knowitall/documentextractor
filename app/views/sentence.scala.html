@@ -4,7 +4,7 @@
 <br />
 @sentence.segment.text
 <table class="extr-table">
-@for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor)) {
+@for((extractor, extrs) <- sentence.extractions.groupBy(_.extractor).toSeq.sortBy(_._1)) {
     <tr><th colspan="8" class="extr-th">@extractor extractions</th></tr>
     <tr>
       <th class="extr-th-small"></th>

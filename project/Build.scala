@@ -7,18 +7,18 @@ object ApplicationBuild extends Build {
     val appName         = "documentextractor"
     val appVersion      = "1.0-SNAPSHOT"
 
-    val nlptoolsVersion = "2.4.1-SNAPSHOT"
+    val nlptoolsVersion = "2.4.1"
     val nlptoolsGroupId = "edu.washington.cs.knowitall.nlptools"
 
     val appDependencies = Seq(jdbc, anorm,
-      "edu.washington.cs.knowitall.ollie" %% "ollie-core" % "1.0.3-SNAPSHOT",
-      "edu.washington.cs.knowitall.chunkedextractor" %% "chunkedextractor" % "1.0.3-SNAPSHOT",
+      "edu.washington.cs.knowitall.ollie" %% "ollie-core" % "1.0.3",
+      "edu.washington.cs.knowitall.chunkedextractor" %% "chunkedextractor" % "1.0.3",
       "org.apache.tika" % "tika-app" % "1.2",
-      "org.scalaz" %% "scalaz" % "6.0.4",
       nlptoolsGroupId %% "nlptools-parse-malt" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-chunk-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-sentence-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-coref-stanford" % nlptoolsVersion,
+      "org.scalaz" %% "scalaz" % "6.0.4",
       "edu.washington.cs.knowitall.openiesrl" %% "openie-srl" % "1.0.0-SNAPSHOT" exclude("com.codecommit", "anti-xml_2.9.1"),
       "net.databinder.dispatch" %% "dispatch-core" % "0.9.5",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",

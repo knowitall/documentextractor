@@ -1,82 +1,51 @@
 package controllers
 
 import java.io.BufferedInputStream
-import java.io.FileInputStream
 import java.io.File
+import java.io.FileInputStream
 import java.net.InetAddress
 import java.net.MalformedURLException
 import java.net.URL
 import java.net.UnknownHostException
+
+import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import scala.util.control.Exception
 import scala.util.control.Exception.catching
+
+import dispatch.Http
+import dispatch.as
+import dispatch.host
+import dispatch.implyRequestHandlerTuple
+import dispatch.implyRequestVerbs
+import edu.knowitall.common.Analysis
 import edu.knowitall.common.Resource
-import edu.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}
-import edu.knowitall.chunkedextractor.Nesty
-import edu.knowitall.chunkedextractor.ReVerb
-import edu.knowitall.chunkedextractor.Relnoun
-import edu.knowitall.ollie.Attribution
-import edu.knowitall.ollie.Context
-import edu.knowitall.ollie.EnablingCondition
-import edu.knowitall.ollie.NaryExtraction
-import edu.knowitall.ollie.Ollie
-import edu.knowitall.ollie.confidence.OllieConfidenceFunction
-import edu.knowitall.openparse.extract.Extraction.{Part => OlliePart}
-import edu.knowitall.tool.chunk.ChunkedToken
-import edu.knowitall.tool.chunk.OpenNlpChunker
-import edu.knowitall.tool.parse.RemoteDependencyParser
-import edu.knowitall.tool.stem.MorphaStemmer
+import edu.knowitall.tool.coref.StanfordCoreferenceResolver
+import edu.knowitall.tool.segment.Segment
 import models.Annotation
-import models.Extraction
 import models.FileInput
 import models.Input
 import models.LogEntry
 import models.LogInput
 import models.TextInput
 import models.UrlInput
+import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms
 import play.api.data.validation.Constraints.nonEmpty
+import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
 import play.api.mvc.Controller
-import edu.knowitall.chunkedextractor.R2A2
-import edu.knowitall.chunkedextractor.Nesty
-import edu.knowitall.tool.stem.MorphaStemmer
-import edu.knowitall.chunkedextractor.Relnoun
-import edu.knowitall.ollie.Attribution
-import edu.knowitall.ollie.EnablingCondition
-import edu.knowitall.ollie.NaryExtraction
-import edu.knowitall.tool.segment.Segment
-import edu.knowitall.tool.coref.StanfordCoreferenceResolver
-import edu.knowitall.collection.immutable.Interval
-import edu.knowitall.tool.coref.Substitution
-import edu.knowitall.tool.srl.RemoteSrl
-import edu.knowitall.tool.srl.ClearSrl
-import edu.knowitall.srl.SrlExtractor
-import edu.knowitall.srl.confidence.SrlConfidenceFunction
-import edu.knowitall.srl.confidence.SrlFeatureSet
-import models.LogInput
-import edu.knowitall.common.Analysis
-import play.api.libs.concurrent.Execution.Implicits._
-import edu.knowitall.srl.SrlExtraction
+import scalax.chart.Charting.RichCategorizedTuples
+import scalax.chart.Charting.XYLineChart
 
 object Application extends Controller {
   final val COREF_ENABLED = false
-
-  lazy val ollie = new Ollie()
-  lazy val ollieConf = OllieConfidenceFunction.loadDefaultClassifier()
-
-  lazy val srlExtractor = new SrlExtractor(clearSrl)
-  lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
-
-  lazy val relnoun = new Relnoun()
-  lazy val chunker = new OpenNlpChunker()
-  lazy val malt = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8002") // new MaltParser()
-  lazy val clear = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8001") // new ClearParser()
-  lazy val clearSrl = new RemoteSrl("http://rv-n16.cs.washington.edu:8011") // new ClearSrl()
   lazy val coref =
     if (COREF_ENABLED) Some(new StanfordCoreferenceResolver())
     else None
+
 
   def index = Action {
     Ok(views.html.index(InputForms.textForm, InputForms.urlForm, 'text))
@@ -133,7 +102,7 @@ object Application extends Controller {
     Ok(builder.toString)
   }
 
-  def logentryPy(id: Long, name: String) = Action { implicit request =>
+  private def precisionYield(id: Long, name: String) = {
     val annotations = Annotation.findAll(logentryId = id, source = name)
     val sentences = createSentences(LogInput(id).sentences)
 
@@ -152,6 +121,12 @@ object Application extends Controller {
     val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
       extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(-_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
     }
+
+    py
+  }
+
+  def logentryPy(id: Long, name: String) = Action { implicit request =>
+    val py = precisionYield(id, name)
 
     val text = py.map { case (extractor, points) =>
       extractor + ":\n" +
@@ -163,24 +138,7 @@ object Application extends Controller {
   }
 
   def logentryPyGraph(id: Long, name: String) = Action { implicit request =>
-    val annotations = Annotation.findAll(logentryId = id, source = name)
-    val sentences = createSentences(LogInput(id).sentences)
-
-    val data = for {
-      sent <- sentences
-      extr <- sent.extractions
-      annotation <- annotations.find(annotation =>
-          annotation.sentence == sent.text &&
-          annotation.arg1 == extr.arg1.string &&
-          annotation.rel == extr.rel.string &&
-          annotation.arg2 == extr.arg2.string)
-    } yield {
-      extr.extractor -> (extr.conf -> annotation.annotation)
-    }
-
-    val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
-      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(-_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
-    }
+    val py = precisionYield(id, name)
 
     import scalax.chart._
     import scalax.chart.Charting._
@@ -201,24 +159,7 @@ object Application extends Controller {
   }
 
   def logentryAnnotations(id: Long, name: String) = Action { implicit request =>
-    val annotations = Annotation.findAll(logentryId = id, source = name).sortBy(_.sentence)
-    val sentences = createSentences(LogInput(id).sentences)
-
-    val data = for {
-      sent <- sentences
-      extr <- sent.extractions
-      annotation <- annotations.find(annotation =>
-          annotation.sentence == sent.text &&
-          annotation.arg1 == extr.arg1.string &&
-          annotation.rel == extr.rel.string &&
-          annotation.arg2 == extr.arg2.string)
-    } yield {
-      extr.extractor -> (extr.conf -> annotation.annotation)
-    }
-
-    val py = for {(extractor, data) <- data.groupBy(_._1)} yield {
-      extractor -> Analysis.precisionYieldMeta(data.map(_._2).sortBy(_._1).map { case (conf, annotation) => "%.2f".format(conf) -> annotation })
-    }
+    val py = precisionYield(id, name)
 
     val text = py.map { case (extractor, points) =>
       extractor + ":\n" + points.map { case (conf, y, p) => Iterable(conf, y, "%.4f" format p).mkString("\t") }.mkString("\n") + "\n"
@@ -320,111 +261,17 @@ object Application extends Controller {
 
   def createSentences(segments: Seq[Segment]) = {
     val sentenceTexts = segments.map(_.text)
-    val graphs = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap { segment =>
-      val maltGraph =
-        malt.synchronized {
-          Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
-        }
-      val clearGraph =
-        clear.synchronized {
-          Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
-        }
+    val processedSegments = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap Extractors.processSegment
 
-      for (m <- maltGraph; c <- clearGraph) yield (segment, (m, c))
+    processedSegments map { sentence =>
+      val extractions = Extractors.Ollie(sentence) ++ Extractors.OpenIE4.Triples(sentence) ++ Extractors.OpenIE4.Nary(sentence) ++ Extractors.ReVerb(sentence)
+      extractions.sortBy { extr =>
+        (extr.extractor, -extr.confidence, -extr.span.start)
+      }
+
+      models.Sentence(sentence.segment, Seq.empty, sentence.maltGraph.nodes.toSeq, extractions)
     }
-
-    def olliePart(extrPart: OlliePart) = models.Part.create(extrPart.text, extrPart.nodes.map(_.indices))
-    def ollieContextPart(extrPart: Context) = {
-      models.Part.create(extrPart.text, Iterable(extrPart.interval))
-    }
-    def reverbPart(extrPart: ChunkedPart[ChunkedToken]) = models.Part.create(extrPart.text, Some(extrPart.tokenInterval))
-
-    graphs map {
-      case (segment, (maltGraph, clearGraph)) =>
-        val rawOllieExtrs = ollie.extract(maltGraph).map { extr => (ollieConf(extr), extr) }.toSeq.sortBy(-_._1)
-        val ollieExtrs = rawOllieExtrs.map(_._2).map { extr =>
-          Extraction.fromTriple("Ollie", extr.extr.enabler.orElse(extr.extr.attribution) map ollieContextPart, olliePart(extr.extr.arg1), olliePart(extr.extr.rel), olliePart(extr.extr.arg2), ollieConf(extr))
-        }
-
-        val chunked = chunker.synchronized {
-          chunker.chunk(segment.text).toList
-        }
-
-        val lemmatized = chunked map MorphaStemmer.lemmatizeToken
-
-        val relnounExtrs = relnoun.extract(lemmatized).map { extr =>
-          Extraction.fromTriple("Relnoun", None, reverbPart(extr.extr.arg1), reverbPart(extr.extr.rel), reverbPart(extr.extr.arg2), 0.9)
-        }
-
-        val srlExtractions = srlExtractor.synchronized {
-          srlExtractor(clearGraph)
-        }
-        val clearExtrs = srlExtractions.map { inst =>
-          val arg1 = inst.extr.arg1
-          val arg2s: Map[Class[_], Seq[SrlExtraction.Argument]] = inst.extr.arg2s.groupBy(_.getClass)
-          val conf = srlConf(inst)
-
-          val vanillaArg2s = arg2s.getOrElse(classOf[SrlExtraction.Argument], Seq.empty)
-          val vanillaArg2Parts = vanillaArg2s.map { arg2 =>
-            models.Part.create(arg2.text, Seq(arg2.interval))
-          }
-
-          val semanticArg2Parts: Seq[models.SemanticPart] = arg2s.filter { case (key, value) =>
-            key != classOf[SrlExtraction.Argument]
-          }.flatMap { case (key, values) =>
-              values.map { value =>
-                val semantics = key match {
-                  case x if x == classOf[SrlExtraction.LocationArgument] => "spatial"
-                  case x if x == classOf[SrlExtraction.TemporalArgument] => "temporal"
-                  case x => throw new IllegalArgumentException("Unknown semantic argument type: " + x)
-                }
-
-                val part = models.Part.create(value.text, Seq(value.interval))
-                models.SemanticPart(semantics, part)
-              }
-          }.toSeq
-
-          val attributes = Seq(
-            if (inst.extr.passive) Some(models.PassiveAttribute) else None,
-            if (inst.extr.active) Some(models.ActiveAttribute) else None,
-            if (inst.extr.negated) Some(models.NegativeAttribute) else None
-          ).flatten
-
-          val context = {
-            inst.extr.context.map { context =>
-              val tokens = context.tokens
-              val text = context.text
-              models.Part.create(text, context.intervals)
-            }
-          }
-
-          Extraction("Open IE 4",
-              context = context,
-              attributes = attributes,
-              arg1 = models.Part.create(arg1.text, Seq(arg1.interval)),
-              rel = models.Part.create(inst.extr.relation.text, Seq(inst.extr.relation.span)),
-              arg2s = vanillaArg2Parts,
-              semanticArgs = semanticArg2Parts,
-              conf = conf)
-        } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4"))
-
-        /*
-        val clearTriples = srlExtractions.filter(_.extr.arg2s.size > 0).flatMap(_.triplize(true)).map { inst =>
-          val conf = srlConf(inst)
-          val arg1 = inst.extr.arg1
-          val arg2 = inst.extr.arg2s.map(_.text).mkString("; ")
-          val arg2Interval = if (inst.extr.arg2s.isEmpty) Interval.empty else Interval.span(inst.extr.arg2s.map(_.interval))
-          Extraction.fromTriple("Open IE 4 Triples", None, models.Part.create(arg1.text, Seq(arg1.interval)), models.Part.create(inst.extr.relation.text, Seq(Interval.span(inst.extr.relation.intervals))), models.Part.create(arg2, Seq(arg2Interval)), conf)
-        } ++ relnounExtrs.map(_.copy(extractor = "Open IE 4 Triples"))
-        */
-
-        val extrs = (ollieExtrs ++ clearExtrs).toSeq.sortBy { extr =>
-          (extr.extractor, -extr.confidence, -extr.span.start)
-        }
-
-        // filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size)
-        models.Sentence(segment, Seq.empty, maltGraph.nodes.toSeq, extrs.toSeq)
-    }
+    // filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size)
   }
 
   def buildDocument(segments: Seq[Segment]) = {
