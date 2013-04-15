@@ -21,17 +21,25 @@ object Extractors {
   lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
 
   lazy val chunker = new OpenNlpChunker()
-  lazy val malt = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8002") // new MaltParser()
-  lazy val clear = new RemoteDependencyParser("http://rv-n16.cs.washington.edu:8001") // new ClearParser()
-  lazy val clearSrl = new RemoteSrl("http://rv-n16.cs.washington.edu:8011") // new ClearSrl()
+  lazy val malt = new RemoteDependencyParser("http://trusty.cs.washington.edu:8002") // new MaltParser()
+  lazy val clear = new RemoteDependencyParser("http://trusty.cs.washington.edu:8001") // new ClearParser()
+  lazy val clearSrl = new RemoteSrl("http://trusty.cs.washington.edu:8011") // new ClearSrl()
 
   def processSegment(segment: Segment) = {
+    def log[T](processor: String, sentence: String, option: Option[T]) = option match {
+      case Some(t) => Some(t)
+      case None => 
+        play.Logger.error("Could not process sentence with " 
+          + processor + ": " + sentence); None
+    }
     for {
       malt <- malt.synchronized {
-        Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text)
+        log("malt", segment.text, 
+          Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text))
       }
       clear <- clear.synchronized {
-        Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text)
+        log("clear", segment.text, 
+          Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text))
       }
       chunked = chunker.synchronized {
         chunker.chunk(segment.text).toList
