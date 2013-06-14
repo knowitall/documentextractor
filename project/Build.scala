@@ -7,20 +7,20 @@ object ApplicationBuild extends Build {
     val appName         = "documentextractor"
     val appVersion      = "1.0-SNAPSHOT"
 
-    val nlptoolsVersion = "2.4.2-SNAPSHOT"
+    val nlptoolsVersion = "2.4.2"
     val nlptoolsGroupId = "edu.washington.cs.knowitall.nlptools"
 
     val appDependencies = Seq(jdbc, anorm,
       "edu.washington.cs.knowitall.ollie" %% "ollie-core" % "1.0.3",
-      "edu.washington.cs.knowitall.chunkedextractor" %% "chunkedextractor" % "1.0.3",
+      "edu.washington.cs.knowitall.chunkedextractor" %% "chunkedextractor" % "1.0.4",
       "org.apache.tika" % "tika-app" % "1.2",
       nlptoolsGroupId %% "nlptools-parse-malt" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-chunk-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-sentence-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-coref-stanford" % nlptoolsVersion,
       "org.scalaz" %% "scalaz" % "6.0.4",
-      "edu.washington.cs.knowitall.openiesrl" %% "openie-srl" % "1.0.0-SNAPSHOT" exclude("com.codecommit", "anti-xml_2.9.1"),
-      "net.databinder.dispatch" %% "dispatch-core" % "0.9.5",
+      "edu.washington.cs.knowitall.srlie" %% "openie-srl" % "1.0.0-RC1",
+      "net.databinder.dispatch" %% "dispatch-core" % "0.10.1",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "net.sourceforge.nekohtml" % "nekohtml" % "1.9.18",
       "xerces" % "xercesImpl" % "2.9.1",

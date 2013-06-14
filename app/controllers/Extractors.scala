@@ -4,8 +4,8 @@ import scala.util.control.Exception
 import edu.knowitall.chunkedextractor.Relnoun
 import edu.knowitall.ollie.Ollie
 import edu.knowitall.ollie.confidence.OllieConfidenceFunction
-import edu.knowitall.srl.SrlExtractor
-import edu.knowitall.srl.confidence.SrlConfidenceFunction
+import edu.knowitall.srlie.SrlExtractor
+import edu.knowitall.srlie.confidence.SrlConfidenceFunction
 import edu.knowitall.tool.chunk.OpenNlpChunker
 import edu.knowitall.tool.parse.RemoteDependencyParser
 import edu.knowitall.tool.segment.Segment
@@ -100,7 +100,7 @@ object Extractors {
   }
 
   object OpenIE4 {
-    import edu.knowitall.srl._
+    import edu.knowitall.srlie._
 
     def convert(inst: SrlExtractionInstance): models.Extraction = {
       val arg1 = inst.extr.arg1
