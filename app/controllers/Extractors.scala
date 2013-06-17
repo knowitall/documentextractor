@@ -82,7 +82,7 @@ object Extractors {
     val reverb = new ReVerb()
     def extract(sentence: Sentence) = {
       reverb.extractWithConfidence(sentence.chunkedTokens.map(_.token)).map { case (conf, extr) =>
-        models.Extraction.fromTriple("Relnoun", None, ReVerb.reverbPart(extr.extr.arg1), ReVerb.reverbPart(extr.extr.rel), ReVerb.reverbPart(extr.extr.arg2), conf)
+        models.Extraction.fromTriple("ReVerb", None, ReVerb.reverbPart(extr.extr.arg1), ReVerb.reverbPart(extr.extr.rel), ReVerb.reverbPart(extr.extr.arg2), conf)
       }.toSeq
     }
   }
