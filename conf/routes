@@ -10,6 +10,8 @@ GET     /logentry/:i/annotate/:name controllers.Application.logentryName(i: Long
 GET     /logentry/:i/gold/:name     controllers.Application.logentryGold(i: Long, name: String)
 GET     /logentry/:i/py/:name       controllers.Application.logentryPy(i: Long, name: String)
 GET     /logentry/:i/graph/:name    controllers.Application.logentryPyGraph(i: Long, name: String)
+
+# curl -v -X POST --data-binary @annotations.txt server:8989/logentry/120/import/foo -H "Content-Type: text/plain"
 POST    /logentry/:i/import/:name   controllers.Application.logentryImport(i: Long, name: String)
 POST    /file                       controllers.Application.submitFile
 POST    /text                       controllers.Application.submitText
