@@ -102,6 +102,11 @@ object Application extends Controller {
     Ok(builder.toString)
   }
 
+  def logentrySentences(id: Long) = Action { implicit request =>
+    val logentry = LogEntry.find(id)
+    Ok(logentry.map(_.sentences.toIndexedSeq.sorted.mkString("\n")).getOrElse("LogEntry not found: " + id))
+  }
+
   private def precisionYield(id: Long, name: String) = {
     val annotations = Annotation.findAll(logentryId = id, source = name)
     val sentences = createSentences(LogInput(id).sentences)

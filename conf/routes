@@ -8,6 +8,7 @@ GET     /logs                       controllers.Application.logs
 GET     /logentry/:i                controllers.Application.logentry(i: Long)
 GET     /logentry/:i/annotate/:name controllers.Application.logentryName(i: Long, name: String)
 GET     /logentry/:i/gold/:name     controllers.Application.logentryGold(i: Long, name: String)
+GET     /logentry/:i/sentences      controllers.Application.logentrySentences(i: Long)
 GET     /logentry/:i/py/:name       controllers.Application.logentryPy(i: Long, name: String)
 GET     /logentry/:i/graph/:name    controllers.Application.logentryPyGraph(i: Long, name: String)
 
