@@ -27,7 +27,7 @@ object ApplicationBuild extends Build {
       "joda-time" % "joda-time" % "2.2",
       "org.apache.derby" % "derby" % "10.9.1.0",
       "org.apache.commons" % "commons-lang3" % "3.1",
-      "com.github.wookietreiber" %% "scala-chart" % "latest.integration"
+      "com.github.wookietreiber" %% "scala-chart" % "0.2.2"
     )
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
