@@ -39,15 +39,4 @@
             return false;
         }
     )
-
-    $.ajax({
-      url: '@routes.Application.summarize',
-      type: "POST",
-      data: {query: '@(document.sentences.iterator.map(sentence => org.apache.commons.lang.StringEscapeUtils.escapeJavaScript(sentence.segment.text)).mkString("\\n"))'},
-      dataType: "html"
-    }).done(function(data) {
-      $("#summary").replaceWith(data)
-    }).fail(function(data, status, error) {
-      $("#summary").replaceWith("Error downloading summaries: " + error)
-    });
 </script>

@@ -205,29 +205,6 @@ object Application extends Controller {
       input => Ok(process(input, visitorName(request, None))))
   }
 
-  def summarize = Action { implicit request =>
-    import dispatch._
-    import play.api.libs.concurrent.Akka
-    import play.api.Play.current
-
-    val svc = host("rv-n06.cs.washington.edu", 8081) / "servlet" / "edu.knowitall.testing.SummarizationServletSimple"
-    val query = request.body.asFormUrlEncoded.get("query")(0)
-
-    val promiseOfString = Akka.future {
-      Http((svc << Map("query" -> query)) OK as.String).apply().split("\n").filter { sentence =>
-        !sentence.trim.isEmpty
-      }.map { summary =>
-        "<li>" + summary + "</li>"
-      }.mkString("<ol>", "\n", "</ol>")
-    }
-    Async {
-      promiseOfString.map(response => Ok(response)).recover { case e: Exception =>
-        System.err.println("Could not communicate with summarization host '" + svc.url + "'. Error: " + e.getMessage)
-        Ok("Error: could not communicate with server: " + svc.url)
-      }
-    }
-  }
-
   def process(input: Input, source: String, id: Option[Long] = None, annotations: Iterable[Annotation] = Iterable.empty)(implicit request: play.api.mvc.Request[_]) = {
     val segments = input.sentences
 
