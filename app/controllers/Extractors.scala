@@ -244,7 +244,7 @@ object Extractors {
         val extrs = srlExtractor.synchronized {
           SrlNestedExtraction.from(srlExtractor(sentence.clearGraph).map(_.extr))
         }
-        (extrs map convertNestedSrlie).map(_.copy(extractor = extractorName))
+        (extrs.filter(extr => extr.arg1.isRight || extr.arg2s.exists(_.isRight)) map convertNestedSrlie).map(_.copy(extractor = extractorName))
       }
     }
   }
