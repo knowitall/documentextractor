@@ -2,8 +2,6 @@ package controllers
 
 import scala.util.control.Exception
 import edu.knowitall.chunkedextractor.Relnoun
-import edu.knowitall.ollie.Ollie
-import edu.knowitall.ollie.confidence.OllieConfidenceFunction
 import edu.knowitall.srlie.SrlExtractor
 import edu.knowitall.srlie.confidence.SrlConfidenceFunction
 import edu.knowitall.tool.chunk.OpenNlpChunker
@@ -28,17 +26,17 @@ object Extractors {
   def processSegment(segment: Segment) = {
     def log[T](processor: String, sentence: String, option: Option[T]) = option match {
       case Some(t) => Some(t)
-      case None => 
-        play.Logger.error("Could not process sentence with " 
+      case None =>
+        play.Logger.error("Could not process sentence with "
           + processor + ": " + sentence); None
     }
     for {
       malt <- malt.synchronized {
-        log("malt", segment.text, 
+        log("malt", segment.text,
           Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text))
       }
       clear <- clear.synchronized {
-        log("clear", segment.text, 
+        log("clear", segment.text,
           Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text))
       }
       chunked = chunker.synchronized {
@@ -55,6 +53,7 @@ object Extractors {
     def apply(sentence: Sentence) = extract(sentence)
   }
 
+/*
   object Ollie extends Extractor {
     import edu.knowitall.openparse.extract.Extraction.{ Part => OlliePart }
     import edu.knowitall.ollie._
@@ -74,6 +73,7 @@ object Extractors {
       }
     }
   }
+*/
 
   object ReVerb extends Extractor {
     import edu.knowitall.chunkedextractor.{ExtractionPart => ChunkedPart}

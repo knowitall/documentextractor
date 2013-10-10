@@ -17,7 +17,6 @@ import dispatch.Http
 import dispatch.as
 import dispatch.host
 import dispatch.implyRequestHandlerTuple
-import dispatch.implyRequestVerbs
 import edu.knowitall.common.Analysis
 import edu.knowitall.common.Resource
 import edu.knowitall.tool.coref.StanfordCoreferenceResolver
@@ -269,7 +268,7 @@ object Application extends Controller {
     val processedSegments = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap Extractors.processSegment
 
     processedSegments map { sentence =>
-      val extractions = Extractors.Ollie(sentence) ++ Extractors.OpenIE4.Triples(sentence) ++ Extractors.OpenIE4.Nary(sentence) ++ Extractors.ReVerb(sentence)
+      val extractions = Extractors.OpenIE4.Triples(sentence) ++ Extractors.OpenIE4.Nary(sentence) ++ Extractors.ReVerb(sentence)
       extractions.sortBy { extr =>
         (extr.extractor, -extr.confidence, -extr.span.start)
       }
