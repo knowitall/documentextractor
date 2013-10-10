@@ -11,7 +11,7 @@ import edu.knowitall.srlie.confidence.SrlConfidenceFunction
 import edu.knowitall.tool.chunk.OpenNlpChunker
 import edu.knowitall.tool.parse.RemoteDependencyParser
 import edu.knowitall.tool.segment.Segment
-import edu.knowitall.tool.srl.RemoteSrl
+import edu.knowitall.tool.srl.ClearSrl
 import edu.knowitall.tool.stem.MorphaStemmer
 import edu.knowitall.tool.parse.graph.DependencyGraph
 import edu.knowitall.tool.stem.Lemmatized
@@ -21,9 +21,8 @@ import edu.knowitall.collection.immutable.Interval
 
 object Extractors {
   lazy val chunker = new OpenNlpChunker()
-  lazy val malt = new RemoteDependencyParser("http://trusty.cs.washington.edu:8002") // new MaltParser()
   lazy val clear = new RemoteDependencyParser("http://trusty.cs.washington.edu:8001") // new ClearParser()
-  lazy val clearSrl = new RemoteSrl("http://trusty.cs.washington.edu:8011") // new ClearSrl()
+  lazy val clearSrl = new ClearSrl()
 
   def processSegment(segment: Segment) = {
     def log[T](processor: String, sentence: String, option: Option[T]) = option match {
@@ -33,10 +32,6 @@ object Extractors {
           + processor + ": " + sentence); None
     }
     for {
-      malt <- malt.synchronized {
-        log("malt", segment.text,
-          Exception.catching(classOf[Exception]) opt malt.dependencyGraph(segment.text))
-      }
       clear <- clear.synchronized {
         log("clear", segment.text,
           Exception.catching(classOf[Exception]) opt clear.dependencyGraph(segment.text))
@@ -45,10 +40,10 @@ object Extractors {
         chunker.chunk(segment.text).toList
       }
       lemmatized = chunked map MorphaStemmer.lemmatizeToken
-    } yield Sentence(segment, lemmatized, malt, clear)
+    } yield Sentence(segment, lemmatized, clear)
   }
 
-  case class Sentence(segment: Segment, chunkedTokens: Seq[Lemmatized[ChunkedToken]], maltGraph: DependencyGraph, clearGraph: DependencyGraph)
+  case class Sentence(segment: Segment, chunkedTokens: Seq[Lemmatized[ChunkedToken]], clearGraph: DependencyGraph)
 
   abstract class Extractor {
     def extract(sentence: Sentence): Seq[models.Extraction]
@@ -133,7 +128,7 @@ object Extractors {
 
       val nestedArg2Parts =
         inst.arg2s.collect { case Right(nested) =>
-          models.Part.create(nested.extr.toString, Seq.empty)
+          models.Part.create(nested.extr.basicTripleString, Seq.empty)
         }
 
       val arg1Part = inst.arg1 match {

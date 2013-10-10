@@ -250,7 +250,7 @@ object Application extends Controller {
         (extr.extractor, -extr.confidence, -extr.span.start)
       }
 
-      models.Sentence(sentence.segment, Seq.empty, sentence.maltGraph.nodes.toSeq, extractions)
+      models.Sentence(sentence.segment, Seq.empty, sentence.clearGraph.nodes.toSeq, extractions)
     }
     // filteredMentions.filter(m => m.mention.offset >= segment.offset && m.mention.offset < segment.offset + segment.text.size)
   }
