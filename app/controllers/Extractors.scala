@@ -2,8 +2,7 @@ package controllers
 
 import scala.util.control.Exception
 import edu.knowitall.chunkedextractor.Relnoun
-import edu.knowitall.srlie.SrlExtractor
-import edu.knowitall.srlie.confidence.SrlConfidenceFunction
+import edu.knowitall.openie.OpenIE
 import edu.knowitall.tool.chunk.OpenNlpChunker
 import edu.knowitall.tool.parse.RemoteDependencyParser
 import edu.knowitall.tool.segment.Segment
@@ -13,15 +12,15 @@ import edu.knowitall.tool.parse.graph.DependencyGraph
 import edu.knowitall.tool.stem.Lemmatized
 import edu.knowitall.tool.chunk.ChunkedToken
 import edu.knowitall.chunkedextractor.ReVerb
+import edu.knowitall.collection.immutable.Interval
 
 object Extractors {
-  lazy val srlExtractor = new SrlExtractor(clearSrl)
-  lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
-
   lazy val chunker = new OpenNlpChunker()
   lazy val malt = new RemoteDependencyParser("http://trusty.cs.washington.edu:8002") // new MaltParser()
   lazy val clear = new RemoteDependencyParser("http://trusty.cs.washington.edu:8001") // new ClearParser()
   lazy val clearSrl = new RemoteSrl("http://trusty.cs.washington.edu:8011") // new ClearSrl()
+
+  lazy val openieExtractor = new OpenIE(clear, clearSrl)
 
   def processSegment(segment: Segment) = {
     def log[T](processor: String, sentence: String, option: Option[T]) = option match {
@@ -100,18 +99,18 @@ object Extractors {
   }
 
   object OpenIE4 {
-    import edu.knowitall.srlie._
+    import edu.knowitall.openie._
 
-    def convert(inst: SrlExtractionInstance): models.Extraction = {
+    def convert(inst: Instance): models.Extraction = {
       val arg1 = inst.extr.arg1
-      val arg2s: Map[Class[_], Seq[SrlExtraction.Argument]] = inst.extr.arg2s.groupBy(_.getClass)
-      val conf = srlConf(inst)
+      val conf = inst.conf
 
-      val vanillaArg2s = arg2s.getOrElse(classOf[SrlExtraction.Argument], Seq.empty)
+      val vanillaArg2s = inst.extr.arg2s
       val vanillaArg2Parts = vanillaArg2s.map { arg2 =>
-        models.Part.create(arg2.text, Seq(arg2.interval))
+        models.Part.create(arg2.text, Seq.empty)
       }
 
+      /*
       val semanticArg2Parts: Seq[models.SemanticPart] = arg2s.filter {
         case (key, value) =>
           key != classOf[SrlExtraction.Argument]
@@ -128,48 +127,50 @@ object Extractors {
             models.SemanticPart(semantics, part)
           }
       }.toSeq
+      */
 
       val attributes = Seq(
         if (inst.extr.passive) Some(models.PassiveAttribute) else None,
-        if (inst.extr.active) Some(models.ActiveAttribute) else None,
         if (inst.extr.negated) Some(models.NegativeAttribute) else None).flatten
 
       val context = {
         inst.extr.context.map { context =>
-          val tokens = context.tokens
+          val tokens = context.text
           val text = context.text
-          models.Part.create(text, context.intervals)
+          models.Part.create(text, Seq.empty)
         }
       }
 
       models.Extraction("Open IE 4",
         context = context,
         attributes = attributes,
-        arg1 = models.Part.create(arg1.text, Seq(arg1.interval)),
-        rel = models.Part.create(inst.extr.relation.text, Seq(inst.extr.relation.span)),
+        arg1 = models.Part.create(arg1.text, Seq(Interval.empty)),
+        rel = models.Part.create(inst.extr.rel.text, Seq(Interval.empty)),
         arg2s = vanillaArg2Parts,
-        semanticArgs = semanticArg2Parts,
+        semanticArgs = Seq.empty,
         conf = conf)
 
     }
 
+/*
     object Triples extends Extractor {
       val extractorName = "Open IE 4 Triples"
       def extract(sentence: Sentence): Seq[models.Extraction] = {
-        val srlExtractions = srlExtractor.synchronized {
-          srlExtractor(sentence.clearGraph) flatMap (_.triplize(true))
+        val extrs = openieExtractor.synchronized {
+          openieExtractor(sentence.clearGraph) flatMap (_.triplize(true))
         }
         ((srlExtractions map convert) ++ Relnoun.extract(sentence)).map(_.copy(extractor = extractorName))
       }
     }
+*/
 
     object Nary extends Extractor {
-      val extractorName = "Open IE 4 Nary"
+      val extractorName = "Open IE 4"
       def extract(sentence: Sentence): Seq[models.Extraction] = {
-        val srlExtractions = srlExtractor.synchronized {
-          srlExtractor(sentence.clearGraph)
+        val extrs = openieExtractor.synchronized {
+          openieExtractor(sentence.segment.text)
         }
-        ((srlExtractions map convert) ++ Relnoun.extract(sentence)).map(_.copy(extractor = extractorName))
+        (extrs map convert).map(_.copy(extractor = extractorName))
       }
     }
   }
