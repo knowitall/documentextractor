@@ -245,7 +245,7 @@ object Application extends Controller {
     val processedSegments = segments map (segment => segment.copy(text = segment.text.trim)) filter (!_.text.isEmpty) flatMap Extractors.processSegment
 
     processedSegments map { sentence =>
-      val extractions = Extractors.OpenIE4.Nary(sentence) ++ Extractors.ReVerb(sentence)
+      val extractions = Extractors.OpenIE4.Nary(sentence) ++ Extractors.OpenIE4.Nested(sentence) ++ Extractors.ReVerb(sentence)
       extractions.sortBy { extr =>
         (extr.extractor, -extr.confidence, -extr.span.start)
       }

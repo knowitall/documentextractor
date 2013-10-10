@@ -3,6 +3,11 @@ package controllers
 import scala.util.control.Exception
 import edu.knowitall.chunkedextractor.Relnoun
 import edu.knowitall.openie.OpenIE
+import edu.knowitall.srlie.SrlExtractor
+import edu.knowitall.srlie.SrlExtraction
+import edu.knowitall.srlie.SrlExtractionInstance
+import edu.knowitall.srlie.nested.SrlNestedExtraction
+import edu.knowitall.srlie.confidence.SrlConfidenceFunction
 import edu.knowitall.tool.chunk.OpenNlpChunker
 import edu.knowitall.tool.parse.RemoteDependencyParser
 import edu.knowitall.tool.segment.Segment
@@ -19,8 +24,6 @@ object Extractors {
   lazy val malt = new RemoteDependencyParser("http://trusty.cs.washington.edu:8002") // new MaltParser()
   lazy val clear = new RemoteDependencyParser("http://trusty.cs.washington.edu:8001") // new ClearParser()
   lazy val clearSrl = new RemoteSrl("http://trusty.cs.washington.edu:8011") // new ClearSrl()
-
-  lazy val openieExtractor = new OpenIE(clear, clearSrl)
 
   def processSegment(segment: Segment) = {
     def log[T](processor: String, sentence: String, option: Option[T]) = option match {
@@ -101,6 +104,67 @@ object Extractors {
   object OpenIE4 {
     import edu.knowitall.openie._
 
+    lazy val openieExtractor = new OpenIE(clear, clearSrl)
+    lazy val srlExtractor = new SrlExtractor(clearSrl)
+    lazy val srlConf = SrlConfidenceFunction.loadDefaultClassifier()
+
+    def convertNestedSrlie(inst: SrlNestedExtraction): models.Extraction = {
+      val arg1 = inst.arg1
+      val arg2s = inst.arg2s
+      val conf = 0.9
+
+      val unnestedArg2s = arg2s.collect { case Left(arg) => arg }
+      val vanillaArg2s = unnestedArg2s.collect { case arg: SrlExtraction.Argument => arg }
+      val vanillaArg2Parts = vanillaArg2s.map { arg2 =>
+        models.Part.create(arg2.text, Seq(arg2.interval))
+      }
+
+      val semanticArg2Parts: Seq[models.SemanticPart] = (
+        unnestedArg2s.toSet -- vanillaArg2s.toSet).map { arg =>
+          val semantics = arg match {
+            case arg: SrlExtraction.LocationArgument => "spatial"
+            case arg: SrlExtraction.TemporalArgument => "temporal"
+            case x => throw new IllegalArgumentException("Unknown semantic argument type: " + x)
+          }
+
+          val part = models.Part.create(arg.text, Seq(arg.interval))
+          models.SemanticPart(semantics, part)
+        }.toSeq
+
+      val nestedArg2Parts =
+        inst.arg2s.collect { case Right(nested) =>
+          models.Part.create(nested.extr.toString, Seq.empty)
+        }
+
+      val arg1Part = inst.arg1 match {
+        case Left(arg) => models.Part.create(arg.text, Seq.empty)
+        case Right(nested) => models.Part.create(nested.extr.basicTripleString, Seq.empty)
+      }
+
+      val attributes = Seq(
+        if (inst.extr.passive) Some(models.PassiveAttribute) else None,
+        if (inst.extr.active) Some(models.ActiveAttribute) else None,
+        if (inst.extr.negated) Some(models.NegativeAttribute) else None).flatten
+
+      val context = {
+        inst.extr.context.map { context =>
+          val tokens = context.tokens
+          val text = context.text
+          models.Part.create(text, context.intervals)
+        }
+      }
+
+      models.Extraction("Open IE 4 Nested",
+        context = context,
+        attributes = attributes,
+        arg1 = arg1Part,
+        rel = models.Part.create(inst.extr.relation.text, Seq.empty),
+        arg2s = vanillaArg2Parts ++ nestedArg2Parts,
+        semanticArgs = semanticArg2Parts,
+        conf = conf)
+
+    }
+
     def convert(inst: Instance): models.Extraction = {
       val arg1 = inst.extr.arg1
       val conf = inst.conf
@@ -171,6 +235,16 @@ object Extractors {
           openieExtractor(sentence.segment.text)
         }
         (extrs map convert).map(_.copy(extractor = extractorName))
+      }
+    }
+
+    object Nested extends Extractor {
+      val extractorName = "Open IE 4 Nested"
+      def extract(sentence: Sentence): Seq[models.Extraction] = {
+        val extrs = srlExtractor.synchronized {
+          SrlNestedExtraction.from(srlExtractor(sentence.clearGraph).map(_.extr))
+        }
+        (extrs map convertNestedSrlie).map(_.copy(extractor = extractorName))
       }
     }
   }

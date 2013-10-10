@@ -75,7 +75,7 @@ object LogEntry {
     entries.map {
       case (id, ip, host, timestamp, sentences) =>
         new PersistedLogEntry(id, ip, Some(host), new DateTime(timestamp), sentences.split("\n"))
-    }
+    }.toSeq
   }
 
   def fromRequest(request: play.api.mvc.Request[_], sentences: Seq[String]) = {
