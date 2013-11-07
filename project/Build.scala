@@ -7,7 +7,7 @@ object ApplicationBuild extends Build {
     val appName         = "documentextractor"
     val appVersion      = "1.0-SNAPSHOT"
 
-    val nlptoolsVersion = "2.4.3"
+    val nlptoolsVersion = "2.4.4-SNAPSHOT"
     val nlptoolsGroupId = "edu.washington.cs.knowitall.nlptools"
 
     val appDependencies = Seq(jdbc, anorm,
@@ -16,7 +16,7 @@ object ApplicationBuild extends Build {
       nlptoolsGroupId %% "nlptools-chunk-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-sentence-opennlp" % nlptoolsVersion,
       nlptoolsGroupId %% "nlptools-coref-stanford" % nlptoolsVersion,
-      "edu.washington.cs.knowitall.openie" %% "openie" % "4.1",
+      "edu.washington.cs.knowitall.openie" %% "openie" % "4.1.1",
       "net.databinder.dispatch" %% "dispatch-core" % "0.11.0",
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "net.sourceforge.nekohtml" % "nekohtml" % "1.9.19",
@@ -38,5 +38,5 @@ object ApplicationBuild extends Build {
       // Add your own project settings here
       resolvers += "boilerpipe-m2-repo" at "https://boilerpipe.googlecode.com/svn/repo/",
       resolvers += "sonatype-snapshot" at "https://oss.sonatype.org/content/repositories/snapshots/"
-    )
+    ).settings(net.virtualvoid.sbt.graph.Plugin.graphSettings: _*)
 }
