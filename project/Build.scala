@@ -7,7 +7,7 @@ object ApplicationBuild extends Build {
     val appName         = "documentextractor"
     val appVersion      = "1.0-SNAPSHOT"
 
-    val nlptoolsVersion = "2.4.4-SNAPSHOT"
+    val nlptoolsVersion = "2.4.5-SNAPSHOT"
     val nlptoolsGroupId = "edu.washington.cs.knowitall.nlptools"
 
     val appDependencies = Seq(jdbc, anorm,
